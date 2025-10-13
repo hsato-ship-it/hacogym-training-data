@@ -21,23 +21,13 @@
       "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/09/f81fd2e4c52864042852c112ce927ae2.wav"
     }
   ],
-
-  "restAudios": [
-    "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/rest1.wav",
-    "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/rest1.wav",
-    "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/rest1.wav"
-  ],
-  "endAudios": [
-    "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav",
-    "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav"
-  ]
 "preparationAudios": [
     {
-      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav",
+      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/preparetion.wav",
       "comment": "姿勢を整えて、器具を確認しましょう。もうすぐ開始です！"
     },
     {
-      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav",
+      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/preparetion.wav",
       "comment": "ウォームアップをしっかり行い、筋肉を温めましょう。"
     }
   ],
@@ -64,4 +54,3 @@
     }
   ]
 }
-
