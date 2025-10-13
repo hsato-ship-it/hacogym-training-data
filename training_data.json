@@ -1,0 +1,22 @@
+[
+  {
+    "id": "bench",
+    "title": "ベンチプレス",
+    "category": "胸",
+    "standardReps": 10,
+    "standardSets": 3,
+    "tips": "肩甲骨を寄せて胸を張り、バーは乳頭ラインに下ろす意識で。足はしっかり踏む。",
+    "video": "https://player.vimeo.com/video/1092652928?h=9eee01f99f",
+    "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/09/f81fd2e4c52864042852c112ce927ae2.wav"
+  },
+  {
+    "id": "deadlift",
+    "title": "デッドリフト",
+    "category": "背中",
+    "standardReps": 8,
+    "standardSets": 3,
+    "tips": "背中を丸めない。バーを体に沿わせ、かかと重心で押し上げる。",
+    "video": "https://player.vimeo.com/video/1092652928?h=9eee01f99f",
+    "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/09/f81fd2e4c52864042852c112ce927ae2.wav"
+  }
+]
