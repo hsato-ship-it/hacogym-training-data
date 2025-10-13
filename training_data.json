@@ -344,11 +344,11 @@
 "preparationAudios": [
     {
       "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/preparetion.wav",
-      "comment": "姿勢を整えて、器具を確認しましょう。もうすぐ開始です！"
+      "comment": "器具の準備やウォームアップは完了しましたか？<br>準備ができたらSTARTボタンを押して始めましょう！"
     },
     {
       "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/preparetion.wav",
-      "comment": "ウォームアップをしっかり行い、筋肉を温めましょう。"
+      "comment": "器具の準備やウォームアップは完了しましたか？<br>準備ができたらSTARTボタンを押して始めましょう！"
     }
   ],
 
