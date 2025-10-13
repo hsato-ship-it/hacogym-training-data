@@ -31,5 +31,37 @@
     "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav",
     "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav"
   ]
+"preparationAudios": [
+    {
+      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav",
+      "comment": "姿勢を整えて、器具を確認しましょう。もうすぐ開始です！"
+    },
+    {
+      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav",
+      "comment": "ウォームアップをしっかり行い、筋肉を温めましょう。"
+    }
+  ],
+
+  "restAudios": [
+    {
+      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/rest1.wav",
+      "comment": "ゆっくり呼吸を整えながら、次の種目に備えましょう。"
+    },
+    {
+      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/rest1.wav",
+      "comment": "水分補給を忘れずに！フォームを思い出しておきましょう。"
+    }
+  ],
+
+  "endAudios": [
+    {
+      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav",
+      "comment": "おつかれさまでした！軽くストレッチをして体を整えましょう。"
+    },
+    {
+      "audio": "https://hacogym.jp/wordpress/wp-content/uploads/2025/10/end_guide.wav",
+      "comment": "今日もよく頑張りました！栄養と休息をしっかり取りましょう。"
+    }
+  ]
 }
 
