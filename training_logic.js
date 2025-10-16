@@ -46,8 +46,10 @@
     const c = document.createElement("div");
     c.className = "card train-card";
     c.innerHTML = `
+      <div class="exercise-header">
+      <div class="exercise-title">${ex.title}</div>
+      </div>
       <div class="video-wrapper">
-        <div class="exercise-title">${ex.title}</div>
         <img src="${ex.gif}" alt="${ex.title}" class="gif-motion">
       </div>
       <p class="standard">標準：${ex.standardReps}回 × ${ex.standardSets}セット</p>
