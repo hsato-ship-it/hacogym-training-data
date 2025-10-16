@@ -39,9 +39,9 @@ function createRecordRow(defaultReps = "", isFirstRow = false) {
 
         // ✅ 視覚フィードバック（緑ハイライト＆「コピー済」）
         copyBtn.classList.add("copied");
-        copyBtn.textContent = "✅ コピー済";
+        copyBtn.textContent = "✅ ";
         setTimeout(() => {
-          copyBtn.textContent = "↻ コピー";
+          copyBtn.textContent = "↻ ";
           copyBtn.classList.remove("copied");
         }, 1200);
       }
