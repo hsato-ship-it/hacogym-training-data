@@ -1,114 +1,111 @@
 // ================================
-// ハコジム トレーニング UI制御
+// ハコジム トレーニング UI 共通関数（デバッグ対応版）
 // ================================
 
 window.HacoGymUI = (() => {
-  let currentAudio = null;
-  let wakeLock = null;
 
-  // --- 進行バー更新 ---
-  function updateProgress(done, total) {
-    const bar = document.getElementById("progressBar");
-    const text = document.getElementById("progressText");
-    const percent = total > 0 ? (done / total) * 100 : 0;
-    bar.style.width = percent + "%";
-    text.textContent = `${done} / ${total}`;
+  const DEBUG = true; // ← デバッグログON/OFF切替
+
+  function log(...args) {
+    if (DEBUG) console.log("🧩[HacoGymUI]", ...args);
   }
 
-  // --- カードのアクティブ化 ---
+  // --- 実施記録1行の作成 ---
+  function createRecordRow(defaultReps = "") {
+    const row = document.createElement("div");
+    row.className = "record-row";
+    row.innerHTML = `
+      <div class="record-field">
+        <label>重量</label>
+        <input type="number" min="0" value="0" /> kg
+      </div>
+      <div class="record-field">
+        <label>回数</label>
+        <input type="number" min="0" value="${defaultReps}" /> 回
+      </div>
+    `;
+    log("✅ Record row created:", defaultReps);
+    return row;
+  }
+
+  // --- アクティブカード設定 ---
   function setActiveCard(card) {
     document.querySelectorAll(".card").forEach(c => c.classList.remove("active", "pulsing"));
     if (card) {
       card.classList.add("active", "pulsing");
-      card.scrollIntoView({ behavior: "smooth", block: "start" });
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      log("🎯 Active card:", card.querySelector(".exercise-title")?.textContent);
     }
   }
 
-  // --- 画面スリープ防止 ---
+  // --- 進行バー更新 ---
+  function updateProgress(done, total) {
+    const pct = total ? (done / total) * 100 : 0;
+    document.getElementById("progressBar").style.width = `${pct}%`;
+    document.getElementById("progressText").textContent = `${done} / ${total}`;
+    log(`📊 Progress: ${done}/${total} (${pct.toFixed(1)}%)`);
+  }
+
+  // --- 結果出力 ---
+  function generateResults() {
+    const lines = [];
+    document.querySelectorAll(".train-card").forEach(card => {
+      const titleEl = card.querySelector(".exercise-title") || card.querySelector("h2");
+      const title = titleEl ? titleEl.textContent.trim() : "(不明な種目)";
+      card.querySelectorAll(".record-row").forEach(r => {
+        const inputs = r.querySelectorAll("input");
+        const w = parseInt(inputs[0].value || "0");
+        const re = parseInt(inputs[1].value || "0");
+        if (w > 0 && re > 0) lines.push(`${title} ${w}kg×${re}回`);
+      });
+    });
+
+    const resultText = lines.length ? lines.join("\n") : "記録が入力されていません。";
+    document.getElementById("resultText").textContent = resultText;
+    const section = document.getElementById("resultSection");
+    section.style.display = "block";
+    window.scrollTo({ top: section.offsetTop - 20, behavior: "smooth" });
+
+    log("📄 Results generated:", resultText);
+  }
+
+  // --- Wake Lock対応 ---
   async function enableWakeLock() {
     try {
-      if ("wakeLock" in navigator) {
-        wakeLock = await navigator.wakeLock.request("screen");
-      }
+      const lock = await navigator.wakeLock.request("screen");
+      log("🟢 Wake Lock enabled");
+      lock.addEventListener("release", () => log("🟡 Wake Lock released"));
     } catch (e) {
-      console.warn("WakeLock失敗", e);
+      log("⚠️ Wake Lock unsupported:", e);
     }
   }
 
-  // --- 実施記録行の作成 ---
-  function createRecordRow(rep = "") {
-    const r = document.createElement("div");
-    r.className = "record-row";
-    r.innerHTML =
-      "<div class='record-field'>重量 <input type='number' min='0' placeholder='0'> kg</div>" +
-      "<div class='record-field'>回数 <input type='number' min='0' value='" + rep + "' placeholder='0'> 回</div>";
-    return r;
+  // --- バージョン表示 ---
+  function showVersion(tag) {
+    const div = document.createElement("div");
+    div.textContent = `🧩 ${tag}`;
+    Object.assign(div.style, {
+      position: "fixed",
+      bottom: "6px",
+      right: "8px",
+      fontSize: "11px",
+      opacity: "0.5",
+      zIndex: "3000",
+    });
+    document.body.appendChild(div);
+    log("💡 Loaded:", tag);
   }
 
-// --- 成果出力 ---
-function generateResults() {
-  const lines = [];
-
-  document.querySelectorAll(".train-card").forEach(card => {
-    // 旧 <h2> → 新 .exercise-title に対応
-    const titleEl = card.querySelector(".exercise-title") || card.querySelector("h2");
-    const title = titleEl ? titleEl.textContent.trim() : "（種目不明）";
-
-    card.querySelectorAll(".record-row").forEach(r => {
-      const i = r.querySelectorAll("input");
-      const w = parseInt(i[0]?.value || "0");
-      const re = parseInt(i[1]?.value || "0");
-      if (w > 0 && re > 0) lines.push(`${title} ${w}kg × ${re}回`);
-    });
-  });
-
-  const resultText = document.getElementById("resultText");
-  resultText.textContent =
-    lines.length > 0 ? lines.join("\n") : "記録が入力されていません。";
-
-  const resultSection = document.getElementById("resultSection");
-  resultSection.style.display = "block";
-
-  window.scrollTo({ top: resultSection.offsetTop, behavior: "smooth" });
-}
-// ============================
-// デバッグ用：バージョン表示
-// ============================
-const uiVersionTag = "training_ui.js v20251018a"; // ←手動で更新
-console.log("✅ Loaded:", uiVersionTag);
-
-// 既にバージョン表示エリアがあれば再利用、なければ作成
-let vBox = document.getElementById("versionBox");
-if (!vBox) {
-  vBox = document.createElement("div");
-  vBox.id = "versionBox";
-  Object.assign(vBox.style, {
-    position: "fixed",
-    bottom: "4px",
-    right: "6px",
-    fontSize: "10px",
-    color: "#888",
-    background: "rgba(255,255,255,0.8)",
-    padding: "3px 6px",
-    borderRadius: "4px",
-    zIndex: "9999",
-    fontFamily: "monospace",
-    lineHeight: "1.4",
-    whiteSpace: "pre"
-  });
-  document.body.appendChild(vBox);
-}
-
-// training_ui.js の行を追加
-vBox.textContent += (vBox.textContent ? "\n" : "") + uiVersionTag;
-
   return {
-    updateProgress,
-    setActiveCard,
     createRecordRow,
+    setActiveCard,
+    updateProgress,
     generateResults,
     enableWakeLock,
-    get currentAudio() { return currentAudio; },
-    set currentAudio(a) { currentAudio = a; }
+    showVersion,
   };
 })();
+
+window.addEventListener("DOMContentLoaded", () => {
+  HacoGymUI.showVersion("training_ui.js v2025-10-18-debug");
+});
