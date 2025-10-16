@@ -47,11 +47,11 @@
     c.className = "card train-card";
     c.innerHTML = `
       <div class="video-wrapper">
+        <div class="exercise-title">${ex.title}</div>
         <img src="${ex.gif}" alt="${ex.title}" class="gif-motion">
       </div>
-      <h2>${ex.title}</h2>
-      <p>標準：${ex.standardReps}回 × ${ex.standardSets}セット</p>
-      <p>${ex.tips}</p>
+      <p class="standard">標準：${ex.standardReps}回 × ${ex.standardSets}セット</p>
+      <p class="tips">${ex.tips}</p>
       <div class="record-inputs">
         <div class="record-label">実施記録入力：</div>
         <div class="record-rows"></div>
