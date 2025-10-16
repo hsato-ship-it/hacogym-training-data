@@ -71,7 +71,36 @@ function generateResults() {
 
   window.scrollTo({ top: resultSection.offsetTop, behavior: "smooth" });
 }
+// ============================
+// デバッグ用：バージョン表示
+// ============================
+const uiVersionTag = "training_ui.js v20251018a"; // ←手動で更新
+console.log("✅ Loaded:", uiVersionTag);
 
+// 既にバージョン表示エリアがあれば再利用、なければ作成
+let vBox = document.getElementById("versionBox");
+if (!vBox) {
+  vBox = document.createElement("div");
+  vBox.id = "versionBox";
+  Object.assign(vBox.style, {
+    position: "fixed",
+    bottom: "4px",
+    right: "6px",
+    fontSize: "10px",
+    color: "#888",
+    background: "rgba(255,255,255,0.8)",
+    padding: "3px 6px",
+    borderRadius: "4px",
+    zIndex: "9999",
+    fontFamily: "monospace",
+    lineHeight: "1.4",
+    whiteSpace: "pre"
+  });
+  document.body.appendChild(vBox);
+}
+
+// training_ui.js の行を追加
+vBox.textContent += (vBox.textContent ? "\n" : "") + uiVersionTag;
 
   return {
     updateProgress,
