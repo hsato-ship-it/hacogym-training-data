@@ -1,5 +1,5 @@
 // ================================
-// ハコジム トレーニング ロジック
+// ハコジム トレーニング ロジック（全カード統一デザイン対応）
 // ================================
 
 (async () => {
@@ -11,6 +11,7 @@
     return await res.json();
   }
 
+  // --- 選択済み種目データの取得 ---
   const params = new URLSearchParams(location.search);
   const selectedIds = params.get("ids")
     ? params.get("ids").split(",")
@@ -22,33 +23,39 @@
     return;
   }
 
+  // --- データ読み込み ---
   const data = await loadData();
   const { exercises = [], preparationAudios = [], restAudios = [], endAudios = [] } = data;
   const selectedData = selectedIds.map(id => exercises.find(x => x.id === id)).filter(Boolean);
   const container = document.getElementById("cardContainer");
   container.innerHTML = "";
 
-  // --- 準備カード ---
+  // ============================
+  // 準備カード
+  // ============================
   let prepAudio = null;
   if (preparationAudios.length) {
     const prep = preparationAudios[Math.floor(Math.random() * preparationAudios.length)];
     const c = document.createElement("div");
     c.className = "card prep-card";
-    c.innerHTML = `<h3>準備</h3><p class="comment">${prep.comment}</p>
-      <audio preload="auto"><source src="${prep.audio}" type="audio/wav"></audio>`;
+    c.innerHTML = `
+      <div class="card-title">準備</div>
+      <p class="comment">${prep.comment}</p>
+      <audio preload="auto"><source src="${prep.audio}" type="audio/wav"></audio>
+    `;
     container.appendChild(c);
     prepAudio = c.querySelector("audio");
     prepAudio.play().catch(() => {});
   }
 
-  // --- トレーニングカード + 休憩カード ---
+  // ============================
+  // トレーニングカード + 休憩カード
+  // ============================
   selectedData.forEach((ex, i) => {
     const c = document.createElement("div");
     c.className = "card train-card";
     c.innerHTML = `
-      <div class="exercise-header">
-      <div class="exercise-title">${ex.title}</div>
-      </div>
+      <div class="card-title">${ex.title}</div>
       <div class="video-wrapper">
         <img src="${ex.gif}" alt="${ex.title}" class="gif-motion">
       </div>
@@ -65,30 +72,43 @@
     for (let s = 0; s < ex.standardSets; s++) {
       rows.appendChild(ui.createRecordRow(ex.standardReps));
     }
-    c.querySelector(".add-set-btn").addEventListener("click", () => rows.appendChild(ui.createRecordRow("")));
+    c.querySelector(".add-set-btn").addEventListener("click", () => {
+      rows.appendChild(ui.createRecordRow(""));
+    });
     container.appendChild(c);
 
+    // --- 休憩カード挿入 ---
     if (i < selectedData.length - 1 && restAudios.length > 0) {
       const r = restAudios[Math.floor(Math.random() * restAudios.length)];
       const restCard = document.createElement("div");
       restCard.className = "card rest-card";
-      restCard.innerHTML = `<h3>休憩</h3><p class="comment">${r.comment}</p>
-        <audio preload="auto"><source src="${r.audio}" type="audio/wav"></audio>`;
+      restCard.innerHTML = `
+        <div class="card-title">休憩</div>
+        <p class="comment">${r.comment}</p>
+        <audio preload="auto"><source src="${r.audio}" type="audio/wav"></audio>
+      `;
       container.appendChild(restCard);
     }
   });
 
-  // --- 終了カード ---
+  // ============================
+  // 終了カード
+  // ============================
   if (endAudios.length) {
     const e = endAudios[Math.floor(Math.random() * endAudios.length)];
     const endCard = document.createElement("div");
     endCard.className = "card end-card";
-    endCard.innerHTML = `<h3>トレーニング終了</h3><p class="comment">${e.comment}</p>
-      <audio preload="auto"><source src="${e.audio}" type="audio/wav"></audio>`;
+    endCard.innerHTML = `
+      <div class="card-title">トレーニング終了</div>
+      <p class="comment">${e.comment}</p>
+      <audio preload="auto"><source src="${e.audio}" type="audio/wav"></audio>
+    `;
     container.appendChild(endCard);
   }
 
-  // --- オーディオイベント設定 ---
+  // ============================
+  // オーディオ進行制御
+  // ============================
   const audios = container.querySelectorAll("audio");
   const trainCards = container.querySelectorAll(".train-card");
   let doneCount = 0;
@@ -111,7 +131,9 @@
     });
   });
 
-  // --- ホバー START! ボタン ---
+  // ============================
+  // STARTボタン制御
+  // ============================
   document.getElementById("startBtn").addEventListener("click", async () => {
     if (prepAudio) {
       prepAudio.pause();
@@ -143,12 +165,14 @@
     });
   });
 
-  // --- 成果コピー ---
+  // ============================
+  // 成果コピー
+  // ============================
   document.getElementById("copyResultBtn").addEventListener("click", async () => {
     const t = document.getElementById("resultText").textContent;
     await navigator.clipboard.writeText(t);
     const b = document.getElementById("copyResultBtn");
     b.textContent = "コピーしました！";
-    setTimeout(() => b.textContent = "本日の成果をコピー", 1500);
+    setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
   });
 })();
