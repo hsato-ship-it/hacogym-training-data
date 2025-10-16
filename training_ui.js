@@ -23,7 +23,7 @@ function createRecordRow(defaultReps = "", isFirstRow = false) {
       <label>回数</label>
       <input type="number" min="0" max="999" value="${defaultReps}" class="r-input" /> 回
     </div>
-    ${isFirstRow ? "" : `<button class="copy-prev-btn">↻ コピー</button>`}
+    ${isFirstRow ? `<button class="copy-prev-btn" style="visibility:hidden;">↻</button>` : `<button class="copy-prev-btn">↻</button>`}
   `;
 
   // コピー動作：前のセットを参照
