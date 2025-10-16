@@ -110,4 +110,43 @@
   });
 
   // --- ホバー START! ボタン ---
-  document.getElementById("startBtn
+  document.getElementById("startBtn").addEventListener("click", async () => {
+    if (prepAudio) {
+      prepAudio.pause();
+      prepAudio.currentTime = 0;
+    }
+    await ui.enableWakeLock();
+    const f = document.querySelector(".train-card audio");
+    if (f) f.play().catch(() => {});
+    const pc = document.getElementById("playerControls");
+    pc.innerHTML = `
+      <button id="togglePlayBtn">▶ 再生 / ⏸ 一時停止</button>
+      <button id="endSessionBtn">🏁 終了</button>
+    `;
+
+    document.getElementById("togglePlayBtn").addEventListener("click", () => {
+      if (!ui.currentAudio) return;
+      if (ui.currentAudio.paused) ui.currentAudio.play();
+      else ui.currentAudio.pause();
+    });
+
+    document.getElementById("endSessionBtn").addEventListener("click", () => {
+      if (confirm("本当に終了しますか？")) {
+        document.querySelectorAll("audio").forEach(a => {
+          a.pause();
+          a.currentTime = 0;
+        });
+        ui.generateResults();
+      }
+    });
+  });
+
+  // --- 成果コピー ---
+  document.getElementById("copyResultBtn").addEventListener("click", async () => {
+    const t = document.getElementById("resultText").textContent;
+    await navigator.clipboard.writeText(t);
+    const b = document.getElementById("copyResultBtn");
+    b.textContent = "コピーしました！";
+    setTimeout(() => b.textContent = "本日の成果をコピー", 1500);
+  });
+})();
