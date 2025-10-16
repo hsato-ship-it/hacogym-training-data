@@ -10,23 +10,41 @@ window.HacoGymUI = (() => {
     if (DEBUG) console.log("🧩[HacoGymUI]", ...args);
   }
 
-  // --- 実施記録1行の作成 ---
-  function createRecordRow(defaultReps = "") {
-    const row = document.createElement("div");
-    row.className = "record-row";
-    row.innerHTML = `
-      <div class="record-field">
-        <label>重量</label>
-        <input type="number" min="0" value="0" /> kg
-      </div>
-      <div class="record-field">
-        <label>回数</label>
-        <input type="number" min="0" value="${defaultReps}" /> 回
-      </div>
-    `;
-    log("✅ Record row created:", defaultReps);
-    return row;
+// --- 実施記録1行の作成 ---
+function createRecordRow(defaultReps = "", isFirstRow = false) {
+  const row = document.createElement("div");
+  row.className = "record-row";
+  row.innerHTML = `
+    <div class="record-field">
+      <label>重量</label>
+      <input type="number" min="0" max="999" value="0" class="w-input" /> kg
+    </div>
+    <div class="record-field">
+      <label>回数</label>
+      <input type="number" min="0" max="999" value="${defaultReps}" class="r-input" /> 回
+    </div>
+    ${isFirstRow ? "" : `<button class="copy-prev-btn">↻ コピー</button>`}
+  `;
+
+  // コピー動作：前のセットを参照
+  if (!isFirstRow) {
+    const copyBtn = row.querySelector(".copy-prev-btn");
+    copyBtn.addEventListener("click", () => {
+      const prev = row.previousElementSibling;
+      if (prev) {
+        const prevW = prev.querySelector(".w-input").value;
+        const prevR = prev.querySelector(".r-input").value;
+        row.querySelector(".w-input").value = prevW;
+        row.querySelector(".r-input").value = prevR;
+        copyBtn.textContent = "✅ コピー済";
+        setTimeout(() => (copyBtn.textContent = "↻ コピー"), 1200);
+      }
+    });
   }
+
+  return row;
+}
+
 
   // --- アクティブカード設定 ---
   function setActiveCard(card) {
