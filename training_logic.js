@@ -175,4 +175,28 @@
     b.textContent = "コピーしました！";
     setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
   });
+
+  // ============================
+// デバッグ用：バージョン表示
+// ============================
+const versionTag = "training_logic.js v20251017d"; // ←ここだけ手動で更新
+console.log("✅ Loaded:", versionTag);
+
+// 画面右下にも小さく表示（WordPress整形対策済）
+const vLabel = document.createElement("div");
+vLabel.textContent = versionTag;
+Object.assign(vLabel.style, {
+  position: "fixed",
+  bottom: "4px",
+  right: "6px",
+  fontSize: "10px",
+  color: "#888",
+  background: "rgba(255,255,255,0.8)",
+  padding: "2px 5px",
+  borderRadius: "4px",
+  zIndex: "9999",
+  fontFamily: "monospace"
+});
+document.body.appendChild(vLabel);
+
 })();
