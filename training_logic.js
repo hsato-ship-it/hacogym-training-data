@@ -77,11 +77,20 @@
       </div>
       <audio preload="auto"><source src="${ex.audio}" type="audio/wav"></audio>
     `;
-    const rows = c.querySelector(".record-rows");
-    for (let s = 0; s < ex.standardSets; s++) rows.appendChild(ui.createRecordRow(ex.standardReps));
-    c.querySelector(".add-set-btn").addEventListener("click", () => rows.appendChild(ui.createRecordRow("")));
-    container.appendChild(c);
-    log("💪 Added exercise card:", ex.title);
+const rows = c.querySelector(".record-rows");
+
+// 標準セット分の行を作成（1行目だけはコピーなし）
+for (let s = 0; s < ex.standardSets; s++) {
+  rows.appendChild(ui.createRecordRow(ex.standardReps, s === 0));
+}
+
+// 「＋追加」ボタン押下時に新規行を追加（コピー機能付き）
+c.querySelector(".add-set-btn").addEventListener("click", () => {
+  const newRow = ui.createRecordRow("", false);
+  rows.appendChild(newRow);
+});
+
+container.appendChild(c);
 
     // --- 休憩カード ---
     if (i < selectedData.length - 1 && restAudios.length > 0) {
