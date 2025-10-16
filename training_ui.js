@@ -45,24 +45,33 @@ window.HacoGymUI = (() => {
     return r;
   }
 
-  // --- 成果出力 ---
-  function generateResults() {
-    const lines = [];
-    document.querySelectorAll(".train-card").forEach(card => {
-      const title = card.querySelector("h2").textContent;
-      card.querySelectorAll(".record-row").forEach(r => {
-        const i = r.querySelectorAll("input");
-        const w = parseInt(i[0].value || "0");
-        const re = parseInt(i[1].value || "0");
-        if (w > 0 && re > 0) lines.push(`${title} ${w}kg×${re}回`);
-      });
+// --- 成果出力 ---
+function generateResults() {
+  const lines = [];
+
+  document.querySelectorAll(".train-card").forEach(card => {
+    // 旧 <h2> → 新 .exercise-title に対応
+    const titleEl = card.querySelector(".exercise-title") || card.querySelector("h2");
+    const title = titleEl ? titleEl.textContent.trim() : "（種目不明）";
+
+    card.querySelectorAll(".record-row").forEach(r => {
+      const i = r.querySelectorAll("input");
+      const w = parseInt(i[0]?.value || "0");
+      const re = parseInt(i[1]?.value || "0");
+      if (w > 0 && re > 0) lines.push(`${title} ${w}kg × ${re}回`);
     });
-    const output = document.getElementById("resultText");
-    output.textContent = lines.length ? lines.join("\n") : "（入力がありません）";
-    document.getElementById("resultSection").style.display = "block";
-    document.getElementById("playerControls").classList.add("hidden");
-    document.getElementById("resultSection").scrollIntoView({ behavior: "smooth" });
-  }
+  });
+
+  const resultText = document.getElementById("resultText");
+  resultText.textContent =
+    lines.length > 0 ? lines.join("\n") : "記録が入力されていません。";
+
+  const resultSection = document.getElementById("resultSection");
+  resultSection.style.display = "block";
+
+  window.scrollTo({ top: resultSection.offsetTop, behavior: "smooth" });
+}
+
 
   return {
     updateProgress,
