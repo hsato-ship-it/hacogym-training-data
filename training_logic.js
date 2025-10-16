@@ -176,28 +176,36 @@
     setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
   });
 
-  // ============================
+// ============================
 // デバッグ用：バージョン表示
 // ============================
-const versionTag = "training_logic.js v20251017e"; // ←ここだけ手動で更新
-console.log("✅ Loaded:", versionTag);
+const logicVersionTag = "training_logic.js v20251018a"; // ←手動で更新
+console.log("✅ Loaded:", logicVersionTag);
 
-  
-// 画面右下にも小さく表示（WordPress整形対策済）
-const vLabel = document.createElement("div");
-vLabel.textContent = versionTag;
-Object.assign(vLabel.style, {
-  position: "fixed",
-  bottom: "4px",
-  right: "6px",
-  fontSize: "10px",
-  color: "#888",
-  background: "rgba(255,255,255,0.8)",
-  padding: "2px 5px",
-  borderRadius: "4px",
-  zIndex: "9999",
-  fontFamily: "monospace"
-});
-document.body.appendChild(vLabel);
+// 既にバージョン表示エリアがあれば再利用、なければ作成
+let vBox = document.getElementById("versionBox");
+if (!vBox) {
+  vBox = document.createElement("div");
+  vBox.id = "versionBox";
+  Object.assign(vBox.style, {
+    position: "fixed",
+    bottom: "4px",
+    right: "6px",
+    fontSize: "10px",
+    color: "#888",
+    background: "rgba(255,255,255,0.8)",
+    padding: "3px 6px",
+    borderRadius: "4px",
+    zIndex: "9999",
+    fontFamily: "monospace",
+    lineHeight: "1.4",
+    whiteSpace: "pre"
+  });
+  document.body.appendChild(vBox);
+}
+
+// training_logic.js の行を追加
+vBox.textContent += (vBox.textContent ? "\n" : "") + logicVersionTag;
+
 
 })();
