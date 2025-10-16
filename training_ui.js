@@ -36,14 +36,21 @@ function createRecordRow(defaultReps = "", isFirstRow = false) {
         const prevR = prev.querySelector(".r-input").value;
         row.querySelector(".w-input").value = prevW;
         row.querySelector(".r-input").value = prevR;
+
+        // ✅ 視覚フィードバック（緑ハイライト＆「コピー済」）
+        copyBtn.classList.add("copied");
         copyBtn.textContent = "✅ コピー済";
-        setTimeout(() => (copyBtn.textContent = "↻ コピー"), 1200);
+        setTimeout(() => {
+          copyBtn.textContent = "↻ コピー";
+          copyBtn.classList.remove("copied");
+        }, 1200);
       }
     });
   }
 
   return row;
 }
+
 
 
   // --- アクティブカード設定 ---
