@@ -179,9 +179,10 @@
   // ============================
 // デバッグ用：バージョン表示
 // ============================
-const versionTag = "training_logic.js v20251017d"; // ←ここだけ手動で更新
+const versionTag = "training_logic.js v20251017e"; // ←ここだけ手動で更新
 console.log("✅ Loaded:", versionTag);
 
+  
 // 画面右下にも小さく表示（WordPress整形対策済）
 const vLabel = document.createElement("div");
 vLabel.textContent = versionTag;
