@@ -1,198 +1,218 @@
 // ================================
-// ハコジム トレーニング実施画面 JS（外部読み込み用）
+// ハコジム トレーニング ロジック（Vimeo対応＋青テーマ＋成果画面強化）
 // ================================
 
-const GITHUB_JSON_URL = "https://raw.githubusercontent.com/hsato-ship-it/hacogym-training-data/main/training_data.json";
-let currentAudio = null, wakeLock = null, readyToStart = false;
+(async () => {
+  const DEBUG = true;
+  const log = (...args) => DEBUG && console.log("🎯[Logic]", ...args);
 
-async function enableWakeLock() {
-  try {
-    if ("wakeLock" in navigator) {
-      wakeLock = await navigator.wakeLock.request("screen");
-    }
-  } catch (e) {
-    console.warn("WakeLock失敗", e);
+  const JSON_URL =
+    "https://raw.githubusercontent.com/hsato-ship-it/hacogym-training-data/main/training_data.json";
+  const ui = window.HacoGymUI;
+  if (!ui) {
+    console.error("❌ HacoGymUI not loaded yet");
+    alert("UIモジュールの読み込みに失敗しました。ページを再読み込みしてください。");
+    return;
   }
-}
 
-function createRecordRow(rep = "") {
-  const r = document.createElement("div");
-  r.className = "record-row";
-  r.innerHTML = "<div class='record-field'>重量 <input type='number' min='0' placeholder='0'> kg</div>" +
-    "<div class='record-field'>回数 <input type='number' min='0' value='" + rep + "' placeholder='0'> 回</div>";
-  return r;
-}
-
-function setActive(c) {
-  document.querySelectorAll(".card").forEach(x => x.classList.remove("active", "pulsing"));
-  if (c) {
-    c.classList.add("active", "pulsing");
-    c.scrollIntoView({ behavior: "smooth", block: "start" });
+  async function loadData() {
+    const res = await fetch(JSON_URL, { cache: "no-store" });
+    log("📥 Fetching training_data.json...");
+    const json = await res.json();
+    log("✅ Data loaded:", json);
+    return json;
   }
-}
 
-function updateProgress(done, total) {
-  const b = document.getElementById("progressBar");
-  const tx = document.getElementById("progressText");
-  const p = total > 0 ? (done / total) * 100 : 0;
-  b.style.width = p + "%";
-  tx.textContent = done + " / " + total;
-}
+  const params = new URLSearchParams(location.search);
+  const selectedIds = params.get("ids")
+    ? params.get("ids").split(",")
+    : JSON.parse(localStorage.getItem("selectedExercises") || "[]");
 
-function generateResults() {
-  const lines = [];
-  document.querySelectorAll(".train-card").forEach(c => {
-    const t = c.querySelector("h2").textContent;
-    c.querySelectorAll(".record-row").forEach(r => {
-      const i = r.querySelectorAll("input");
-      const w = parseInt(i[0].value || "0");
-      const re = parseInt(i[1].value || "0");
-      if (w > 0 && re > 0) lines.push(t + " " + w + "kg×" + re + "回");
-    });
-  });
-  const out = document.getElementById("resultText");
-  out.textContent = lines.length ? lines.join("\n") : "（入力がありません）";
-  document.getElementById("resultSection").style.display = "block";
-  document.getElementById("resultSection").scrollIntoView({ behavior: "smooth" });
-  document.getElementById("playerControls").classList.add("hidden");
-}
-
-async function loadTrainingData() {
-  const r = await fetch(GITHUB_JSON_URL, { cache: "no-store" });
-  return await r.json();
-}
-
-async function init() {
-  const p = new URLSearchParams(location.search);
-  const ids = p.get("ids") ? p.get("ids").split(",") : JSON.parse(localStorage.getItem("selectedExercises") || "[]");
-  if (!ids.length) {
+  if (!selectedIds.length) {
     alert("選択データがありません");
     location.href = "training_select";
     return;
   }
 
-  const d = await loadTrainingData();
-  const exercises = d.exercises || [];
-  const preparationAudios = d.preparationAudios || [];
-  const restAudios = d.restAudios || [];
-  const endAudios = d.endAudios || [];
+  const data = await loadData();
+  const { exercises = [], preparationAudios = [], restAudios = [], endAudios = [] } = data;
+  const selectedData = selectedIds.map(id => exercises.find(x => x.id === id)).filter(Boolean);
+  const container = document.getElementById("cardContainer");
+  container.innerHTML = "";
+  log("🧩 Selected exercises:", selectedData);
 
-  const sel = ids.map(id => exercises.find(x => x.id === id)).filter(Boolean);
-  const cont = document.getElementById("cardContainer");
-  cont.innerHTML = "";
-
+  // --- 準備カード ---
   let prepAudio = null;
   if (preparationAudios.length) {
-    const pr = preparationAudios[Math.floor(Math.random() * preparationAudios.length)];
+    const prep = preparationAudios[Math.floor(Math.random() * preparationAudios.length)];
     const c = document.createElement("div");
     c.className = "card prep-card";
-    c.innerHTML = "<h3>準備</h3><p class='comment'>" + pr.comment + "</p>" +
-      "<audio preload='auto'><source src='" + pr.audio + "' type='audio/wav'></audio>";
-    cont.appendChild(c);
+    c.innerHTML = `
+      <div class="exercise-header blue-header">
+        <div class="exercise-title">準備</div>
+      </div>
+      <p class="comment">${prep.comment}</p>
+      <audio preload="auto"><source src="${prep.audio}" type="audio/wav"></audio>
+    `;
+    container.appendChild(c);
     prepAudio = c.querySelector("audio");
-    if (prepAudio) prepAudio.play().catch(() => {});
+    log("🎧 Prep audio:", prep.audio);
   }
 
-  sel.forEach((ex, i) => {
+  // --- トレーニングカード ---
+  selectedData.forEach((ex, i) => {
     const c = document.createElement("div");
     c.className = "card train-card";
-    c.innerHTML =
-      "<div class='video-wrapper'><img src='" + ex.gif + "' alt='" + ex.title + "' class='gif-motion'></div>" +
-      "<h2>" + ex.title + "</h2><p>標準：" + ex.standardReps + "回 × " + ex.standardSets + "セット</p>" +
-      "<p>" + ex.tips + "</p>" +
-      "<div class='record-inputs'><div class='record-label'>実施記録入力：</div><div class='record-rows'></div>" +
-      "<button class='add-set-btn'>＋ 追加</button></div>" +
-      "<audio preload='auto'><source src='" + ex.audio + "' type='audio/wav'></audio>";
-    const rows = c.querySelector(".record-rows");
-    for (let s = 0; s < ex.standardSets; s++) rows.appendChild(createRecordRow(ex.standardReps));
-    c.querySelector(".add-set-btn").addEventListener("click", () => rows.appendChild(createRecordRow("")));
-    cont.appendChild(c);
 
-    if (i < sel.length - 1 && restAudios.length > 0) {
+    // Vimeo埋め込み
+    c.innerHTML = `
+      <div class="exercise-header red-header">
+        <div class="exercise-title">${ex.title}</div>
+      </div>
+      <div class="video-wrapper">
+        <iframe
+          src="${ex.video}&autoplay=1&loop=1&muted=1&controls=0&title=0&byline=0&portrait=0"
+          frameborder="0"
+          allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          title="${ex.title}"></iframe>
+      </div>
+      <p class="standard">標準：${ex.standardReps}回 × ${ex.standardSets}セット</p>
+      <p class="tips">${ex.tips}</p>
+      <div class="record-inputs">
+        <div class="record-label">実施記録入力：</div>
+        <div class="record-rows"></div>
+        <button class="add-set-btn">＋ 追加</button>
+      </div>
+      <audio preload="auto"><source src="${ex.audio}" type="audio/wav"></audio>
+    `;
+
+    const rows = c.querySelector(".record-rows");
+
+    for (let s = 0; s < ex.standardSets; s++) {
+      rows.appendChild(ui.createRecordRow(ex.standardReps, s === 0));
+    }
+
+    c.querySelector(".add-set-btn").addEventListener("click", () => {
+      const newRow = ui.createRecordRow("", false);
+      rows.appendChild(newRow);
+    });
+
+    container.appendChild(c);
+
+    // --- 休憩カード ---
+    if (i < selectedData.length - 1 && restAudios.length > 0) {
       const r = restAudios[Math.floor(Math.random() * restAudios.length)];
-      const rc = document.createElement("div");
-      rc.className = "card rest-card";
-      rc.innerHTML = "<h3>休憩</h3><p class='comment'>" + r.comment + "</p>" +
-        "<audio preload='auto'><source src='" + r.audio + "' type='audio/wav'></audio>";
-      cont.appendChild(rc);
+      const restCard = document.createElement("div");
+      restCard.className = "card rest-card";
+      restCard.innerHTML = `
+        <div class="exercise-header blue-header">
+          <div class="exercise-title">休憩</div>
+        </div>
+        <p class="comment">${r.comment}</p>
+        <audio preload="auto"><source src="${r.audio}" type="audio/wav"></audio>
+      `;
+      container.appendChild(restCard);
+      log("💤 Added rest card.");
     }
   });
 
+  // --- 終了カード ---
   if (endAudios.length) {
     const e = endAudios[Math.floor(Math.random() * endAudios.length)];
-    const ec = document.createElement("div");
-    ec.className = "card end-card";
-    ec.innerHTML = "<h3>トレーニング終了</h3><p class='comment'>" + e.comment + "</p>" +
-      "<audio preload='auto'><source src='" + e.audio + "' type='audio/wav'></audio>";
-    cont.appendChild(ec);
+    const endCard = document.createElement("div");
+    endCard.className = "card end-card";
+    endCard.innerHTML = `
+      <div class="exercise-header blue-header">
+        <div class="exercise-title">トレーニング終了</div>
+      </div>
+      <p class="comment">${e.comment}</p>
+      <audio preload="auto"><source src="${e.audio}" type="audio/wav"></audio>
+    `;
+    container.appendChild(endCard);
+    log("🏁 Added end card.");
   }
 
-  const audios = cont.querySelectorAll("audio");
-  const trains = cont.querySelectorAll(".train-card");
-  let done = 0;
-  updateProgress(0, trains.length);
+  // --- オーディオ制御 ---
+  const audios = container.querySelectorAll("audio");
+  const trainCards = container.querySelectorAll(".train-card");
+  let doneCount = 0;
+  ui.updateProgress(0, trainCards.length);
 
   audios.forEach((a, i) => {
     const card = a.closest(".card");
     a.addEventListener("play", () => {
       audios.forEach(x => x !== a && x.pause());
-      setActive(card);
-      currentAudio = a;
+      ui.setActiveCard(card);
+      ui.currentAudio = a;
+      log("▶ 再生開始:", card.className);
     });
     a.addEventListener("ended", () => {
-      if (card.classList.contains("prep-card")) {
-        readyToStart = true;
-        return;
-      }
-      if (card.classList.contains("train-card")) done++;
-      updateProgress(done, trains.length);
+      if (card.classList.contains("train-card")) doneCount++;
+      ui.updateProgress(doneCount, trainCards.length);
       const next = audios[i + 1];
       if (next) next.play();
-      else generateResults();
+      else ui.generateResults();
+      log("⏹ 再生終了:", card.className);
     });
   });
 
-  // --- START! ボタン ---
+  // --- STARTボタン ---
   document.getElementById("startBtn").addEventListener("click", async () => {
+    log("🚀 STARTボタン押下");
+    await ui.enableWakeLock();
+
+    // 🎧 準備音声 → トレーニング音声の順に再生
     if (prepAudio) {
-      prepAudio.pause();
-      prepAudio.currentTime = 0;
+      prepAudio.play();
+      prepAudio.addEventListener("ended", () => {
+        const f = document.querySelector(".train-card audio");
+        if (f) f.play().catch(() => log("⚠️ audio再生失敗"));
+      });
+    } else {
+      const f = document.querySelector(".train-card audio");
+      if (f) f.play().catch(() => log("⚠️ audio再生失敗"));
     }
-    await enableWakeLock();
-    const f = document.querySelector(".train-card audio");
-    if (f) f.play().catch(() => {});
+
     const pc = document.getElementById("playerControls");
-    pc.innerHTML =
-      "<button id='togglePlayBtn'>▶ 再生 / ⏸ 一時停止</button>" +
-      "<button id='endSessionBtn'>🏁 終了</button>";
+    pc.innerHTML = `
+      <button id="togglePlayBtn">▶ 再生 / ⏸ 一時停止</button>
+      <button id="endSessionBtn">🏁 終了</button>
+    `;
 
     document.getElementById("togglePlayBtn").addEventListener("click", () => {
-      if (!currentAudio) return;
-      if (currentAudio.paused) currentAudio.play();
-      else currentAudio.pause();
+      if (!ui.currentAudio) return;
+      if (ui.currentAudio.paused) ui.currentAudio.play();
+      else ui.currentAudio.pause();
     });
 
     document.getElementById("endSessionBtn").addEventListener("click", () => {
       if (confirm("本当に終了しますか？")) {
-        document.querySelectorAll("audio").forEach(a => {
-          a.pause();
-          a.currentTime = 0;
-        });
-        generateResults();
+        document.querySelectorAll("audio").forEach(a => { a.pause(); a.currentTime = 0; });
+        ui.generateResults();
       }
     });
   });
-}
 
-document.getElementById("copyResultBtn").addEventListener("click", async () => {
-  const t = document.getElementById("resultText").textContent;
-  await navigator.clipboard.writeText(t);
-  const b = document.getElementById("copyResultBtn");
-  b.textContent = "コピーしました！";
-  setTimeout(() => b.textContent = "本日の成果をコピー", 1500);
-});
+  // --- 成果コピー ---
+  document.getElementById("copyResultBtn").addEventListener("click", async () => {
+    const t = document.getElementById("resultText").textContent;
+    await navigator.clipboard.writeText(t);
+    const b = document.getElementById("copyResultBtn");
+    b.textContent = "コピーしました！";
+    setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
+  });
 
-init().catch(e => {
-  alert("データ読み込み失敗");
-  console.error(e);
-});
+  // --- 成果画面後のボタン置き換え ---
+  const originalGenerateResults = ui.generateResults;
+  ui.generateResults = function () {
+    originalGenerateResults.call(ui);
+    const pc = document.getElementById("playerControls");
+    pc.innerHTML = `<button id="backToMenuBtn">🏠 メニューセレクトに戻る</button>`;
+    document.getElementById("backToMenuBtn").addEventListener("click", () => {
+      location.href = "training_select";
+    });
+  };
+
+  ui.showVersion("training_logic.js v2025-10-18-blue-theme");
+})();
