@@ -1,12 +1,13 @@
 // ================================
-// ハコジム トレーニング ロジック（デバッグ対応版）
+// ハコジム トレーニング ロジック（Vimeo対応＋デバッグ版）
 // ================================
 
 (async () => {
   const DEBUG = true;
   const log = (...args) => DEBUG && console.log("🎯[Logic]", ...args);
 
-  const JSON_URL = "https://raw.githubusercontent.com/hsato-ship-it/hacogym-training-data/main/training_data.json";
+  const JSON_URL =
+    "https://raw.githubusercontent.com/hsato-ship-it/hacogym-training-data/main/training_data.json";
   const ui = window.HacoGymUI;
   if (!ui) {
     console.error("❌ HacoGymUI not loaded yet");
@@ -51,7 +52,8 @@
         <div class="exercise-title">準備</div>
       </div>
       <p class="comment">${prep.comment}</p>
-      <audio preload="auto"><source src="${prep.audio}" type="audio/wav"></audio>`;
+      <audio preload="auto"><source src="${prep.audio}" type="audio/wav"></audio>
+    `;
     container.appendChild(c);
     prepAudio = c.querySelector("audio");
     log("🎧 Prep audio:", prep.audio);
@@ -61,19 +63,19 @@
   selectedData.forEach((ex, i) => {
     const c = document.createElement("div");
     c.className = "card train-card";
+
+    // 🎥 Vimeo埋め込み（muted＋安全構文）
     c.innerHTML = `
       <div class="exercise-header">
         <div class="exercise-title">${ex.title}</div>
       </div>
       <div class="video-wrapper">
-        <iframe 
-          src="${ex.video}?autoplay=1&loop=1&controls=0&title=0&byline=0&portrait=0" 
-          frameborder="0" 
-          allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
-        referrerpolicy="strict-origin-when-cross-origin" 
-        style="position:absolute;top:0;left:0;width:100%;height:100%;" 
-        title="${ex.title}">
-        </iframe>
+        <iframe
+          src="${ex.video}?autoplay=1&loop=1&muted=1&controls=0&title=0&byline=0&portrait=0"
+          frameborder="0"
+          allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          title="${ex.title}"></iframe>
       </div>
       <p class="standard">標準：${ex.standardReps}回 × ${ex.standardSets}セット</p>
       <p class="tips">${ex.tips}</p>
@@ -84,20 +86,21 @@
       </div>
       <audio preload="auto"><source src="${ex.audio}" type="audio/wav"></audio>
     `;
-const rows = c.querySelector(".record-rows");
 
-// 標準セット分の行を作成（1行目だけはコピーなし）
-for (let s = 0; s < ex.standardSets; s++) {
-  rows.appendChild(ui.createRecordRow(ex.standardReps, s === 0));
-}
+    const rows = c.querySelector(".record-rows");
 
-// 「＋追加」ボタン押下時に新規行を追加（コピー機能付き）
-c.querySelector(".add-set-btn").addEventListener("click", () => {
-  const newRow = ui.createRecordRow("", false);
-  rows.appendChild(newRow);
-});
+    // 標準セット分の行を作成（1行目だけはコピーなし）
+    for (let s = 0; s < ex.standardSets; s++) {
+      rows.appendChild(ui.createRecordRow(ex.standardReps, s === 0));
+    }
 
-container.appendChild(c);
+    // 「＋追加」ボタン押下時に新規行を追加（コピー機能付き）
+    c.querySelector(".add-set-btn").addEventListener("click", () => {
+      const newRow = ui.createRecordRow("", false);
+      rows.appendChild(newRow);
+    });
+
+    container.appendChild(c);
 
     // --- 休憩カード ---
     if (i < selectedData.length - 1 && restAudios.length > 0) {
@@ -109,7 +112,8 @@ container.appendChild(c);
           <div class="exercise-title">休憩</div>
         </div>
         <p class="comment">${r.comment}</p>
-        <audio preload="auto"><source src="${r.audio}" type="audio/wav"></audio>`;
+        <audio preload="auto"><source src="${r.audio}" type="audio/wav"></audio>
+      `;
       container.appendChild(restCard);
       log("💤 Added rest card.");
     }
@@ -125,7 +129,8 @@ container.appendChild(c);
         <div class="exercise-title">トレーニング終了</div>
       </div>
       <p class="comment">${e.comment}</p>
-      <audio preload="auto"><source src="${e.audio}" type="audio/wav"></audio>`;
+      <audio preload="auto"><source src="${e.audio}" type="audio/wav"></audio>
+    `;
     container.appendChild(endCard);
     log("🏁 Added end card.");
   }
@@ -178,7 +183,10 @@ container.appendChild(c);
     document.getElementById("endSessionBtn").addEventListener("click", () => {
       log("🟥 終了ボタン押下");
       if (confirm("本当に終了しますか？")) {
-        document.querySelectorAll("audio").forEach(a => { a.pause(); a.currentTime = 0; });
+        document.querySelectorAll("audio").forEach(a => {
+          a.pause();
+          a.currentTime = 0;
+        });
         ui.generateResults();
       }
     });
@@ -190,9 +198,9 @@ container.appendChild(c);
     await navigator.clipboard.writeText(t);
     const b = document.getElementById("copyResultBtn");
     b.textContent = "コピーしました！";
-    setTimeout(() => b.textContent = "本日の成果をコピー", 1500);
+    setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
     log("📋 成果をコピー:", t);
   });
 
-  ui.showVersion("training_logic.js v2025-10-18-debug");
+  ui.showVersion("training_logic.js v2025-10-18-vimeo-debug");
 })();
