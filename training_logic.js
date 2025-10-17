@@ -66,7 +66,14 @@
         <div class="exercise-title">${ex.title}</div>
       </div>
       <div class="video-wrapper">
-        <img src="${ex.gif}" alt="${ex.title}" class="gif-motion">
+        <iframe 
+          src="${ex.video}?autoplay=1&loop=1&controls=0&title=0&byline=0&portrait=0" 
+          frameborder="0" 
+          allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
+        referrerpolicy="strict-origin-when-cross-origin" 
+        style="position:absolute;top:0;left:0;width:100%;height:100%;" 
+        title="${ex.title}">
+        </iframe>
       </div>
       <p class="standard">標準：${ex.standardReps}回 × ${ex.standardSets}セット</p>
       <p class="tips">${ex.tips}</p>
