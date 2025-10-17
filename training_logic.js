@@ -71,7 +71,7 @@
       </div>
       <div class="video-wrapper">
         <iframe
-          src="${ex.video}?autoplay=1&loop=1&muted=1&controls=0&title=0&byline=0&portrait=0"
+          src="${ex.video}&autoplay=1&loop=1&muted=1&controls=0&title=0&byline=0&portrait=0"
           frameborder="0"
           allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
           referrerpolicy="strict-origin-when-cross-origin"
