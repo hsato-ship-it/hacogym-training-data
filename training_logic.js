@@ -1,5 +1,5 @@
 // ================================
-// ハコジム トレーニング ロジック（Vimeo対応＋デバッグ版）
+// ハコジム トレーニング ロジック（Vimeo対応＋青テーマ＋成果画面強化）
 // ================================
 
 (async () => {
@@ -48,7 +48,7 @@
     const c = document.createElement("div");
     c.className = "card prep-card";
     c.innerHTML = `
-      <div class="exercise-header">
+      <div class="exercise-header blue-header">
         <div class="exercise-title">準備</div>
       </div>
       <p class="comment">${prep.comment}</p>
@@ -64,9 +64,9 @@
     const c = document.createElement("div");
     c.className = "card train-card";
 
-    // 🎥 Vimeo埋め込み（muted＋安全構文）
+    // Vimeo埋め込み
     c.innerHTML = `
-      <div class="exercise-header">
+      <div class="exercise-header red-header">
         <div class="exercise-title">${ex.title}</div>
       </div>
       <div class="video-wrapper">
@@ -89,12 +89,10 @@
 
     const rows = c.querySelector(".record-rows");
 
-    // 標準セット分の行を作成（1行目だけはコピーなし）
     for (let s = 0; s < ex.standardSets; s++) {
       rows.appendChild(ui.createRecordRow(ex.standardReps, s === 0));
     }
 
-    // 「＋追加」ボタン押下時に新規行を追加（コピー機能付き）
     c.querySelector(".add-set-btn").addEventListener("click", () => {
       const newRow = ui.createRecordRow("", false);
       rows.appendChild(newRow);
@@ -108,7 +106,7 @@
       const restCard = document.createElement("div");
       restCard.className = "card rest-card";
       restCard.innerHTML = `
-        <div class="exercise-header">
+        <div class="exercise-header blue-header">
           <div class="exercise-title">休憩</div>
         </div>
         <p class="comment">${r.comment}</p>
@@ -125,7 +123,7 @@
     const endCard = document.createElement("div");
     endCard.className = "card end-card";
     endCard.innerHTML = `
-      <div class="exercise-header">
+      <div class="exercise-header blue-header">
         <div class="exercise-title">トレーニング終了</div>
       </div>
       <p class="comment">${e.comment}</p>
@@ -162,31 +160,35 @@
   // --- STARTボタン ---
   document.getElementById("startBtn").addEventListener("click", async () => {
     log("🚀 STARTボタン押下");
-    if (prepAudio) {
-      prepAudio.pause();
-      prepAudio.currentTime = 0;
-    }
     await ui.enableWakeLock();
-    const f = document.querySelector(".train-card audio");
-    if (f) f.play().catch(() => log("⚠️ audio再生失敗"));
+
+    // 🎧 準備音声 → トレーニング音声の順に再生
+    if (prepAudio) {
+      prepAudio.play();
+      prepAudio.addEventListener("ended", () => {
+        const f = document.querySelector(".train-card audio");
+        if (f) f.play().catch(() => log("⚠️ audio再生失敗"));
+      });
+    } else {
+      const f = document.querySelector(".train-card audio");
+      if (f) f.play().catch(() => log("⚠️ audio再生失敗"));
+    }
+
     const pc = document.getElementById("playerControls");
     pc.innerHTML = `
       <button id="togglePlayBtn">▶ 再生 / ⏸ 一時停止</button>
       <button id="endSessionBtn">🏁 終了</button>
     `;
+
     document.getElementById("togglePlayBtn").addEventListener("click", () => {
       if (!ui.currentAudio) return;
       if (ui.currentAudio.paused) ui.currentAudio.play();
       else ui.currentAudio.pause();
-      log("⏯ 再生/停止切替");
     });
+
     document.getElementById("endSessionBtn").addEventListener("click", () => {
-      log("🟥 終了ボタン押下");
       if (confirm("本当に終了しますか？")) {
-        document.querySelectorAll("audio").forEach(a => {
-          a.pause();
-          a.currentTime = 0;
-        });
+        document.querySelectorAll("audio").forEach(a => { a.pause(); a.currentTime = 0; });
         ui.generateResults();
       }
     });
@@ -199,8 +201,18 @@
     const b = document.getElementById("copyResultBtn");
     b.textContent = "コピーしました！";
     setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
-    log("📋 成果をコピー:", t);
   });
 
-  ui.showVersion("training_logic.js v2025-10-18-vimeo-debug");
+  // --- 成果画面後のボタン置き換え ---
+  const originalGenerateResults = ui.generateResults;
+  ui.generateResults = function () {
+    originalGenerateResults.call(ui);
+    const pc = document.getElementById("playerControls");
+    pc.innerHTML = `<button id="backToMenuBtn">🏠 メニューセレクトに戻る</button>`;
+    document.getElementById("backToMenuBtn").addEventListener("click", () => {
+      location.href = "training_select";
+    });
+  };
+
+  ui.showVersion("training_logic.js v2025-10-18-blue-theme");
 })();
