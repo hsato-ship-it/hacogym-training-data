@@ -228,5 +228,5 @@ if (preparationAudios.length) {
     });
   };
 
-  ui.showVersion("training_logic.js v2025-10-18-blue-theme");
+  ui.showVersion("training_logic.js v2025-10");
 })();
