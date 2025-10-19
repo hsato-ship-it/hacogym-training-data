@@ -41,23 +41,37 @@
   container.innerHTML = "";
   log("🧩 Selected exercises:", selectedData);
 
-  // --- 準備カード ---
-  let prepAudio = null;
-  if (preparationAudios.length) {
-    const prep = preparationAudios[Math.floor(Math.random() * preparationAudios.length)];
-    const c = document.createElement("div");
-    c.className = "card prep-card";
-    c.innerHTML = `
-      <div class="exercise-header blue-header">
-        <div class="exercise-title">準備</div>
-      </div>
-      <p class="comment">${prep.comment}</p>
-      <audio preload="auto"><source src="${prep.audio}" type="audio/wav"></audio>
-    `;
-    container.appendChild(c);
-    prepAudio = c.querySelector("audio");
-    log("🎧 Prep audio:", prep.audio);
-  }
+// --- 準備カード ---
+let prepAudio = null;
+if (preparationAudios.length) {
+  const prep = preparationAudios[Math.floor(Math.random() * preparationAudios.length)];
+  const c = document.createElement("div");
+  c.className = "card prep-card";
+  c.innerHTML = `
+    <div class="exercise-header">
+      <div class="exercise-title">準備</div>
+    </div>
+    <p class="comment">${prep.comment}</p>
+    <audio preload="auto"><source src="${prep.audio}" type="audio/wav"></audio>
+  `;
+  container.appendChild(c);
+  prepAudio = c.querySelector("audio");
+  log("🎧 Prep audio:", prep.audio);
+
+  // --- 準備音声の自動再生（ページロード時）---
+  window.addEventListener("load", () => {
+    if (!prepAudio) return;
+    prepAudio.play().catch(() => {
+      log("⚠️ 準備音声の自動再生失敗（ユーザー操作待ち）");
+    });
+    prepAudio.addEventListener("ended", () => {
+      const startBtn = document.getElementById("startBtn");
+      if (startBtn) startBtn.disabled = false;
+      log("✅ 準備完了。STARTボタン有効化");
+    });
+  });
+}
+
 
   // --- トレーニングカード ---
   selectedData.forEach((ex, i) => {
