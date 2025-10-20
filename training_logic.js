@@ -81,7 +81,16 @@
         player.pause();
       });
 
-      player.ready().then(() => log("✅ vimeo ready:", "#" + iframe.id));
+      player.ready().then(() => {
+  log("✅ vimeo ready:", "#" + iframe.id);
+  // 最初から再生してループ、静音で開始
+  player.setMuted(true);
+  player.setLoop(true);
+  player.setAutopause(false);
+  player.play().catch(() => log("⚠️ autoplay blocked on ready"));
+});
+
+      
       player.on("play", () => log("▶ vimeo playing:", "#" + iframe.id));
       player.on("error", (e) => log("❌ vimeo error:", e));
 
