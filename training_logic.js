@@ -1,5 +1,5 @@
 // ================================
-// ハコジム トレーニング ロジック（Vimeo順次再生対応版）
+// ハコジム トレーニング ロジック（Vimeo順次再生・安定動作版）
 // ================================
 (async () => {
   const DEBUG = true;
@@ -50,7 +50,9 @@
       vimeoPlayers.set(iframe, player);
       player.setLoop(true);
       player.setMuted(true);
-      player.pause(); // 初期状態では停止
+      iframe.addEventListener("load", () => {
+        player.pause(); // 読み込み完了後に停止状態にする
+      });
       return player;
     } catch (e) {
       log("⚠️ Vimeo Player初期化失敗:", e);
@@ -62,9 +64,19 @@
     const iframe = card.querySelector("iframe");
     if (!iframe) return;
     let player = vimeoPlayers.get(iframe);
-    if (!player) player = initVimeoPlayer(iframe);
-    if (player) {
-      player.play().catch(() => log("⚠️ Vimeo再生ブロック:", iframe.src));
+
+    const play = () => {
+      if (!player) player = initVimeoPlayer(iframe);
+      if (player) {
+        player.play().catch(() => log("⚠️ Vimeo再生ブロック:", iframe.src));
+      }
+    };
+
+    // iframeがまだ読み込み中ならload完了後に再生
+    if (iframe.contentWindow && iframe.readyState !== "complete") {
+      iframe.addEventListener("load", play, { once: true });
+    } else {
+      play();
     }
   }
 
@@ -103,7 +115,7 @@
   selectedData.forEach((ex, i) => {
     const c = document.createElement("div");
     c.className = "card train-card";
-    const iframeId = `vimeo-player-${i}`; // 🎯 各動画にユニークID付与
+    const iframeId = `vimeo-player-${i}`;
 
     c.innerHTML = `
       <div class="exercise-header red-header">
@@ -140,7 +152,7 @@
     });
 
     container.appendChild(c);
-    initVimeoPlayer(c.querySelector("iframe")); // 🎬 初期化のみ実行
+    initVimeoPlayer(c.querySelector("iframe"));
 
     // --- 休憩カード ---
     if (i < selectedData.length - 1 && restAudios.length > 0) {
@@ -189,7 +201,7 @@
       ui.setActiveCard(card);
       ui.currentAudio = a;
       log("▶ 再生開始:", card.className);
-      playVimeoInCard(card); // 🎬 音声開始時に対応するVimeo動画を再生
+      playVimeoInCard(card); // 🎬 音声再生に合わせてVimeoも再生
     });
 
     a.addEventListener("ended", () => {
@@ -199,7 +211,7 @@
       const next = audios[i + 1];
       if (next) {
         const nextCard = next.closest(".card");
-        playVimeoInCard(nextCard); // 🎬 次カードのVimeoを再生
+        playVimeoInCard(nextCard); // 🎬 次のカードも再生
         next.play();
       } else {
         ui.generateResults();
@@ -221,7 +233,7 @@
     const first = document.querySelector(".train-card audio");
     if (first) {
       const firstCard = first.closest(".card");
-      playVimeoInCard(firstCard); // 🎬 1種目目Vimeo再生
+      playVimeoInCard(firstCard); // 🎬 最初の動画再生
       first.play().catch(() => log("⚠️ audio再生失敗"));
     }
 
@@ -277,5 +289,5 @@
     });
   };
 
-  ui.showVersion("training_logic.js v2025-10-21-vimeo-seq");
+  ui.showVersion("training_logic.js v2025-10-21-stable");
 })();
