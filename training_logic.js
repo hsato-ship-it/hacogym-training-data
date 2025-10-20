@@ -154,12 +154,23 @@
   audios.forEach((a, i) => {
     const card = a.closest(".card");
 
-    a.addEventListener("play", () => {
-      audios.forEach(x => x !== a && x.pause());
-      ui.setActiveCard(card);
-      ui.currentAudio = a;
-      log("▶ 再生開始:", card.className);
-    });
+  a.addEventListener("play", () => {
+  audios.forEach(x => x !== a && x.pause());
+  ui.setActiveCard(card);
+  ui.currentAudio = a;
+  log("▶ 再生開始:", card.className);
+
+  // 🎬 Vimeo動画があれば強制再生
+  const iframe = card.querySelector("iframe");
+  if (iframe && window.Vimeo) {
+    try {
+      const player = new Vimeo.Player(iframe);
+      player.play().catch(() => log("⚠️ Vimeo再生ブロック"));
+    } catch (e) {
+      log("⚠️ Vimeo Player初期化失敗", e);
+    }
+  }
+});
 
     a.addEventListener("ended", () => {
       // 準備カードはここで終了（次へ自動遷移しない）
