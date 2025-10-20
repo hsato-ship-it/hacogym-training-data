@@ -1,5 +1,5 @@
 // ================================
-// ハコジム トレーニング ロジック（Vimeo順次再生・安定動作版）
+// ハコジム トレーニング ロジック（Vimeo順次再生＋APIロード保証＋準備自動再生）
 // ================================
 (async () => {
   const DEBUG = true;
@@ -12,6 +12,28 @@
     console.error("❌ HacoGymUI not loaded yet");
     alert("UIモジュールの読み込みに失敗しました。ページを再読み込みしてください。");
     return;
+  }
+
+  // --- Vimeo APIを確実に読み込む ---
+  async function ensureVimeoAPI() {
+    if (window.Vimeo && window.Vimeo.Player) {
+      console.log("🎯[Logic] 🎬 Vimeo API already present");
+      return;
+    }
+    console.log("🎯[Logic] 📡 Loading Vimeo API...");
+    await new Promise((resolve) => {
+      const s = document.createElement("script");
+      s.src = "https://player.vimeo.com/api/player.js";
+      s.onload = () => {
+        console.log("🎯[Logic] 🎬 Vimeo API loaded");
+        resolve();
+      };
+      s.onerror = () => {
+        console.error("❌ Vimeo API load failed");
+        resolve();
+      };
+      document.head.appendChild(s);
+    });
   }
 
   async function loadData() {
@@ -34,6 +56,8 @@
   }
 
   const data = await loadData();
+  await ensureVimeoAPI(); // ← Vimeo APIロード保証（ここが重要）
+
   const { exercises = [], preparationAudios = [], restAudios = [], endAudios = [] } = data;
   const selectedData = selectedIds.map(id => exercises.find(x => x.id === id)).filter(Boolean);
   const container = document.getElementById("cardContainer");
@@ -46,13 +70,21 @@
   function initVimeoPlayer(iframe) {
     if (!iframe || !window.Vimeo) return null;
     try {
+      log("🔧 init vimeo:", "#" + iframe.id);
       const player = new Vimeo.Player(iframe);
       vimeoPlayers.set(iframe, player);
       player.setLoop(true);
       player.setMuted(true);
+
       iframe.addEventListener("load", () => {
-        player.pause(); // 読み込み完了後に停止状態にする
+        log("🎞️ iframe loaded:", "#" + iframe.id);
+        player.pause();
       });
+
+      player.ready().then(() => log("✅ vimeo ready:", "#" + iframe.id));
+      player.on("play", () => log("▶ vimeo playing:", "#" + iframe.id));
+      player.on("error", (e) => log("❌ vimeo error:", e));
+
       return player;
     } catch (e) {
       log("⚠️ Vimeo Player初期化失敗:", e);
@@ -64,16 +96,15 @@
     const iframe = card.querySelector("iframe");
     if (!iframe) return;
     let player = vimeoPlayers.get(iframe);
-
     const play = () => {
       if (!player) player = initVimeoPlayer(iframe);
       if (player) {
+        log("▶ vimeo play request:", "#" + iframe.id);
         player.play().catch(() => log("⚠️ Vimeo再生ブロック:", iframe.src));
       }
     };
-
-    // iframeがまだ読み込み中ならload完了後に再生
-    if (iframe.contentWindow && iframe.readyState !== "complete") {
+    // iframeロード待ち
+    if (!iframe.contentWindow || iframe.readyState !== "complete") {
       iframe.addEventListener("load", play, { once: true });
     } else {
       play();
@@ -97,12 +128,9 @@
     prepAudio = c.querySelector("audio");
     log("🎧 Prep audio:", prep.audio);
 
-    // --- 準備音声の自動再生 ---
     window.addEventListener("load", () => {
       if (!prepAudio) return;
-      prepAudio.play().catch(() => {
-        log("⚠️ 準備音声の自動再生失敗（ユーザー操作待ち）");
-      });
+      prepAudio.play().catch(() => log("⚠️ 準備音声の自動再生失敗（ユーザー操作待ち）"));
       prepAudio.addEventListener("ended", () => {
         const startBtn = document.getElementById("startBtn");
         if (startBtn) startBtn.disabled = false;
@@ -154,7 +182,6 @@
     container.appendChild(c);
     initVimeoPlayer(c.querySelector("iframe"));
 
-    // --- 休憩カード ---
     if (i < selectedData.length - 1 && restAudios.length > 0) {
       const r = restAudios[Math.floor(Math.random() * restAudios.length)];
       const restCard = document.createElement("div");
@@ -171,7 +198,6 @@
     }
   });
 
-  // --- 終了カード ---
   if (endAudios.length) {
     const e = endAudios[Math.floor(Math.random() * endAudios.length)];
     const endCard = document.createElement("div");
@@ -187,7 +213,6 @@
     log("🏁 Added end card.");
   }
 
-  // --- オーディオ制御 ---
   const audios = container.querySelectorAll("audio");
   const trainCards = container.querySelectorAll(".train-card");
   let doneCount = 0;
@@ -195,23 +220,20 @@
 
   audios.forEach((a, i) => {
     const card = a.closest(".card");
-
     a.addEventListener("play", () => {
       audios.forEach(x => x !== a && x.pause());
       ui.setActiveCard(card);
       ui.currentAudio = a;
       log("▶ 再生開始:", card.className);
-      playVimeoInCard(card); // 🎬 音声再生に合わせてVimeoも再生
+      playVimeoInCard(card);
     });
-
     a.addEventListener("ended", () => {
       if (card.classList.contains("train-card")) doneCount++;
       ui.updateProgress(doneCount, trainCards.length);
-
       const next = audios[i + 1];
       if (next) {
         const nextCard = next.closest(".card");
-        playVimeoInCard(nextCard); // 🎬 次のカードも再生
+        playVimeoInCard(nextCard);
         next.play();
       } else {
         ui.generateResults();
@@ -220,12 +242,9 @@
     });
   });
 
-  // --- STARTボタン ---
   document.getElementById("startBtn").addEventListener("click", async () => {
     log("🚀 STARTボタン押下");
     await ui.enableWakeLock();
-
-    // 準備音声停止 → トレーニング1種目目へ
     if (prepAudio) {
       prepAudio.pause();
       prepAudio.currentTime = 0;
@@ -233,11 +252,10 @@
     const first = document.querySelector(".train-card audio");
     if (first) {
       const firstCard = first.closest(".card");
-      playVimeoInCard(firstCard); // 🎬 最初の動画再生
+      playVimeoInCard(firstCard);
       first.play().catch(() => log("⚠️ audio再生失敗"));
     }
 
-    // コントロールボタン配置
     const pc = document.getElementById("playerControls");
     pc.innerHTML = `
       <button id="togglePlayBtn">▶ 再生 / ⏸ 一時停止</button>
@@ -258,7 +276,6 @@
     });
   });
 
-  // --- 成果コピー ---
   document.getElementById("copyResultBtn").addEventListener("click", async () => {
     const t = document.getElementById("resultText").textContent;
     await navigator.clipboard.writeText(t);
@@ -267,27 +284,23 @@
     setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
   });
 
-  // --- 成果表示の拡張（Xシェア＆戻るボタン）---
   const originalGenerateResults = ui.generateResults;
   ui.generateResults = function () {
     originalGenerateResults.call(ui);
-
     const pc = document.getElementById("playerControls");
     pc.innerHTML = `
       <button id="shareBtn">✖ Xでシェア</button>
       <button id="backToMenuBtn">🏠 メニューセレクトに戻る</button>
     `;
-
     document.getElementById("shareBtn").addEventListener("click", () => {
       const text = encodeURIComponent("今日のトレーニング完了！💪 #ハコジム");
       const url = encodeURIComponent(window.location.href);
       window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank");
     });
-
     document.getElementById("backToMenuBtn").addEventListener("click", () => {
       location.href = "training_select";
     });
   };
 
-  ui.showVersion("training_logic.js v2025-10-21-stable");
+  ui.showVersion("training_logic.js v2025-10-21-vimeo-stable");
 })();
