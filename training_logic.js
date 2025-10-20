@@ -273,5 +273,5 @@
     }
   };
 
-  ui.showVersion("training_logic.js v2025-10-20");
+  ui.showVersion("training_logic.js v2025-10-20a");
 })();
