@@ -217,16 +217,31 @@ if (preparationAudios.length) {
     setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
   });
 
-  // --- 成果画面後のボタン置き換え ---
-  const originalGenerateResults = ui.generateResults;
-  ui.generateResults = function () {
-    originalGenerateResults.call(ui);
-    const pc = document.getElementById("playerControls");
-    pc.innerHTML = `<button id="backToMenuBtn">🏠 メニューセレクトに戻る</button>`;
-    document.getElementById("backToMenuBtn").addEventListener("click", () => {
-      location.href = "training_select";
-    });
-  };
+const originalGenerateResults = ui.generateResults;
+ui.generateResults = function () {
+  originalGenerateResults.call(ui);
+
+  // --- 🎯 成果カード表示時にシェア＆戻るボタンをセット ---
+  const pc = document.getElementById("playerControls");
+  pc.innerHTML = `
+    <button id="shareBtn">🐦 Xでシェア</button>
+    <button id="backToMenuBtn">🏠 メニューセレクトに戻る</button>
+  `;
+
+  // 🐦 シェア機能
+  document.getElementById("shareBtn").addEventListener("click", () => {
+    const text = encodeURIComponent("今日のトレーニング完了！💪 #ハコジム");
+    const url = encodeURIComponent(window.location.href);
+    const shareURL = `https://twitter.com/intent/tweet?text=${text}&url=${url}`;
+    window.open(shareURL, "_blank");
+  });
+
+  // 🏠 戻るボタン
+  document.getElementById("backToMenuBtn").addEventListener("click", () => {
+    location.href = "training_select";
+  });
+};
+
 
   ui.showVersion("training_logic.js v2025-10");
 })();
