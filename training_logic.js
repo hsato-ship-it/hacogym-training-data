@@ -1,5 +1,5 @@
 // ================================
-// ハコジム トレーニング ロジック（Vimeo再生保証版＋準備自動再生）
+// ハコジム トレーニング ロジック（Vimeo順次再生対応版）
 // ================================
 (async () => {
   const DEBUG = true;
@@ -39,6 +39,34 @@
   const container = document.getElementById("cardContainer");
   container.innerHTML = "";
   log("🧩 Selected exercises:", selectedData);
+
+  // --- Vimeoプレイヤー管理 ---
+  const vimeoPlayers = new Map();
+
+  function initVimeoPlayer(iframe) {
+    if (!iframe || !window.Vimeo) return null;
+    try {
+      const player = new Vimeo.Player(iframe);
+      vimeoPlayers.set(iframe, player);
+      player.setLoop(true);
+      player.setMuted(true);
+      player.pause(); // 初期状態では停止
+      return player;
+    } catch (e) {
+      log("⚠️ Vimeo Player初期化失敗:", e);
+      return null;
+    }
+  }
+
+  function playVimeoInCard(card) {
+    const iframe = card.querySelector("iframe");
+    if (!iframe) return;
+    let player = vimeoPlayers.get(iframe);
+    if (!player) player = initVimeoPlayer(iframe);
+    if (player) {
+      player.play().catch(() => log("⚠️ Vimeo再生ブロック:", iframe.src));
+    }
+  }
 
   // --- 準備カード ---
   let prepAudio = null;
@@ -83,13 +111,13 @@
       </div>
       <div class="video-wrapper">
         <iframe
-  id="${iframeId}"
-  src="${ex.video}&autoplay=1&loop=1&muted=1&controls=0&title=0&byline=0&portrait=0"
-  frameborder="0"
-  allow="autoplay; fullscreen; picture-in-picture"
-  referrerpolicy="strict-origin-when-cross-origin"
-  title="${ex.title}">
-</iframe>
+          id="${iframeId}"
+          src="${ex.video}?loop=1&muted=1&controls=0&title=0&byline=0&portrait=0"
+          frameborder="0"
+          allow="autoplay; fullscreen; picture-in-picture"
+          referrerpolicy="strict-origin-when-cross-origin"
+          title="${ex.title}">
+        </iframe>
       </div>
       <p class="standard">標準：${ex.standardReps}回 × ${ex.standardSets}セット</p>
       <p class="tips">${ex.tips}</p>
@@ -112,6 +140,7 @@
     });
 
     container.appendChild(c);
+    initVimeoPlayer(c.querySelector("iframe")); // 🎬 初期化のみ実行
 
     // --- 休憩カード ---
     if (i < selectedData.length - 1 && restAudios.length > 0) {
@@ -154,30 +183,27 @@
 
   audios.forEach((a, i) => {
     const card = a.closest(".card");
+
     a.addEventListener("play", () => {
       audios.forEach(x => x !== a && x.pause());
       ui.setActiveCard(card);
       ui.currentAudio = a;
       log("▶ 再生開始:", card.className);
-
-      // 🎬 Vimeo動画の強制再生（ユニークID対応）
-      const iframe = card.querySelector("iframe");
-      if (iframe && window.Vimeo) {
-        try {
-          const player = new Vimeo.Player(iframe.id);
-          player.play().catch(() => log("⚠️ Vimeo再生ブロック"));
-        } catch (e) {
-          log("⚠️ Vimeo Player初期化失敗", e);
-        }
-      }
+      playVimeoInCard(card); // 🎬 音声開始時に対応するVimeo動画を再生
     });
 
     a.addEventListener("ended", () => {
       if (card.classList.contains("train-card")) doneCount++;
       ui.updateProgress(doneCount, trainCards.length);
+
       const next = audios[i + 1];
-      if (next) next.play();
-      else ui.generateResults();
+      if (next) {
+        const nextCard = next.closest(".card");
+        playVimeoInCard(nextCard); // 🎬 次カードのVimeoを再生
+        next.play();
+      } else {
+        ui.generateResults();
+      }
       log("⏹ 再生終了:", card.className);
     });
   });
@@ -193,7 +219,11 @@
       prepAudio.currentTime = 0;
     }
     const first = document.querySelector(".train-card audio");
-    if (first) first.play().catch(() => log("⚠️ audio再生失敗"));
+    if (first) {
+      const firstCard = first.closest(".card");
+      playVimeoInCard(firstCard); // 🎬 1種目目Vimeo再生
+      first.play().catch(() => log("⚠️ audio再生失敗"));
+    }
 
     // コントロールボタン配置
     const pc = document.getElementById("playerControls");
@@ -247,5 +277,5 @@
     });
   };
 
-  ui.showVersion("training_logic.js v2025-10-21");
+  ui.showVersion("training_logic.js v2025-10-21-vimeo-seq");
 })();
