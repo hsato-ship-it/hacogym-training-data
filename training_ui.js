@@ -1,5 +1,5 @@
 // ================================
-// HacoGym UI Module（自重モード切替付き）
+// HacoGym UI Module（自重切替＋Copyボタン整形版）
 // ================================
 window.HacoGymUI = (() => {
   const ui = {};
@@ -11,7 +11,7 @@ window.HacoGymUI = (() => {
     row.className = "record-row";
     row.innerHTML = `
       <div class="record-field">
-        <label class="weight-label">重量</label>
+        <button class="weight-label-btn">重量</button>
         <input type="number" min="0" max="999" value="0" class="w-input" />
         <span class="weight-unit">kg</span>
       </div>
@@ -19,7 +19,11 @@ window.HacoGymUI = (() => {
         <label>回数</label>
         <input type="number" min="0" max="999" value="${defaultReps}" class="r-input" /> 回
       </div>
-      ${isFirstRow ? "" : `<button class="copy-prev-btn">↻</button>`}
+      ${
+        isFirstRow
+          ? `<span class="copy-placeholder">Copy</span>`
+          : `<button class="copy-prev-btn">↻</button>`
+      }
     `;
 
     // --- ⏩ 前のセットコピー ---
@@ -42,19 +46,19 @@ window.HacoGymUI = (() => {
       });
     }
 
-    // --- ⚖️ 自重切替 ---
-    const weightLabel = row.querySelector(".weight-label");
+    // --- ⚖️ 自重切替（重量ボタンタップ） ---
+    const weightBtn = row.querySelector(".weight-label-btn");
     const weightInput = row.querySelector(".w-input");
     const weightUnit = row.querySelector(".weight-unit");
 
-    weightLabel.addEventListener("click", () => {
+    weightBtn.addEventListener("click", () => {
       const isBodyweight = row.classList.toggle("bodyweight-mode");
       if (isBodyweight) {
-        weightLabel.textContent = "自重";
+        weightBtn.textContent = "自重";
         weightInput.style.display = "none";
         weightUnit.style.display = "none";
       } else {
-        weightLabel.textContent = "重量";
+        weightBtn.textContent = "重量";
         weightInput.style.display = "";
         weightUnit.style.display = "";
       }
@@ -92,7 +96,8 @@ window.HacoGymUI = (() => {
       const reps = r.querySelector(".r-input")?.value || 0;
       result += `${weight} × ${reps}回\n`;
     });
-    document.getElementById("resultText").textContent = result || "記録が入力されていません。";
+    document.getElementById("resultText").textContent =
+      result || "記録が入力されていません。";
     document.getElementById("resultSection").style.display = "block";
     console.log("📄 Results generated:", result);
   };
