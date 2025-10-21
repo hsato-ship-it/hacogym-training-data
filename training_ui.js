@@ -26,25 +26,46 @@ window.HacoGymUI = (() => {
       }
     `;
 
-    // --- ⏩ 前のセットコピー ---
-    if (!isFirstRow) {
-      const copyBtn = row.querySelector(".copy-prev-btn");
-      copyBtn.addEventListener("click", () => {
-        const prev = row.previousElementSibling;
-        if (prev) {
-          const prevW = prev.querySelector(".w-input").value;
-          const prevR = prev.querySelector(".r-input").value;
-          row.querySelector(".w-input").value = prevW;
-          row.querySelector(".r-input").value = prevR;
-          copyBtn.classList.add("copied");
-          copyBtn.textContent = "✅";
-          setTimeout(() => {
-            copyBtn.textContent = "↻";
-            copyBtn.classList.remove("copied");
-          }, 1200);
-        }
-      });
+// --- ⏩ 前のセットコピー ---
+if (!isFirstRow) {
+  const copyBtn = row.querySelector(".copy-prev-btn");
+  copyBtn.addEventListener("click", () => {
+    const prev = row.previousElementSibling;
+    if (prev) {
+      const prevW = prev.querySelector(".w-input");
+      const prevR = prev.querySelector(".r-input");
+      const isPrevBody = prev.classList.contains("bodyweight-mode");
+
+      const thisW = row.querySelector(".w-input");
+      const thisR = row.querySelector(".r-input");
+
+      if (isPrevBody) {
+        // 🔹 前の行が自重 → 自動的に自重モードに
+        row.classList.add("bodyweight-mode");
+        row.querySelector(".weight-label-btn").textContent = "自重";
+        thisW.style.display = "none";
+        row.querySelector(".weight-unit").style.display = "none";
+      } else {
+        // 🔹 通常（重量あり）
+        row.classList.remove("bodyweight-mode");
+        row.querySelector(".weight-label-btn").textContent = "重量";
+        thisW.style.display = "";
+        row.querySelector(".weight-unit").style.display = "";
+        thisW.value = prevW?.value || 0;
+      }
+
+      thisR.value = prevR?.value || 0;
+
+      copyBtn.classList.add("copied");
+      copyBtn.textContent = "✅";
+      setTimeout(() => {
+        copyBtn.textContent = "↻";
+        copyBtn.classList.remove("copied");
+      }, 1200);
     }
+  });
+}
+
 
     // --- ⚖️ 自重切替（重量ボタンタップ） ---
     const weightBtn = row.querySelector(".weight-label-btn");
