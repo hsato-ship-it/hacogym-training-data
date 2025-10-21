@@ -1,136 +1,123 @@
 // ================================
-// ハコジム トレーニング UI 共通関数（デバッグ対応版）
+// HacoGym UI Module（自重モード切替付き）
 // ================================
-
 window.HacoGymUI = (() => {
+  const ui = {};
+  ui.currentAudio = null;
 
-  const DEBUG = true; // ← デバッグログON/OFF切替
+  // --- 実施記録1行の作成 ---
+  ui.createRecordRow = function (defaultReps = "", isFirstRow = false) {
+    const row = document.createElement("div");
+    row.className = "record-row";
+    row.innerHTML = `
+      <div class="record-field">
+        <label class="weight-label">重量</label>
+        <input type="number" min="0" max="999" value="0" class="w-input" />
+        <span class="weight-unit">kg</span>
+      </div>
+      <div class="record-field">
+        <label>回数</label>
+        <input type="number" min="0" max="999" value="${defaultReps}" class="r-input" /> 回
+      </div>
+      ${isFirstRow ? "" : `<button class="copy-prev-btn">↻</button>`}
+    `;
 
-  function log(...args) {
-    if (DEBUG) console.log("🧩[HacoGymUI]", ...args);
-  }
+    // --- ⏩ 前のセットコピー ---
+    if (!isFirstRow) {
+      const copyBtn = row.querySelector(".copy-prev-btn");
+      copyBtn.addEventListener("click", () => {
+        const prev = row.previousElementSibling;
+        if (prev) {
+          const prevW = prev.querySelector(".w-input").value;
+          const prevR = prev.querySelector(".r-input").value;
+          row.querySelector(".w-input").value = prevW;
+          row.querySelector(".r-input").value = prevR;
+          copyBtn.classList.add("copied");
+          copyBtn.textContent = "✅";
+          setTimeout(() => {
+            copyBtn.textContent = "↻";
+            copyBtn.classList.remove("copied");
+          }, 1200);
+        }
+      });
+    }
 
-// --- 実施記録1行の作成 ---
-function createRecordRow(defaultReps = "", isFirstRow = false) {
-  const row = document.createElement("div");
-  row.className = "record-row";
-  row.innerHTML = `
-    <div class="record-field">
-      <label>重量</label>
-      <input type="number" min="0" max="999" value="0" class="w-input" /> kg
-    </div>
-    <div class="record-field">
-      <label>回数</label>
-      <input type="number" min="0" max="999" value="${defaultReps}" class="r-input" /> 回
-    </div>
-    ${isFirstRow ? `<button class="copy-prev-btn" style="visibility:hidden;">↻</button>` : `<button class="copy-prev-btn">↻</button>`}
-  `;
+    // --- ⚖️ 自重切替 ---
+    const weightLabel = row.querySelector(".weight-label");
+    const weightInput = row.querySelector(".w-input");
+    const weightUnit = row.querySelector(".weight-unit");
 
-  // コピー動作：前のセットを参照
-  if (!isFirstRow) {
-    const copyBtn = row.querySelector(".copy-prev-btn");
-    copyBtn.addEventListener("click", () => {
-      const prev = row.previousElementSibling;
-      if (prev) {
-        const prevW = prev.querySelector(".w-input").value;
-        const prevR = prev.querySelector(".r-input").value;
-        row.querySelector(".w-input").value = prevW;
-        row.querySelector(".r-input").value = prevR;
-
-        // ✅ 視覚フィードバック（緑ハイライト＆「コピー済」）
-        copyBtn.classList.add("copied");
-        copyBtn.textContent = "✅ ";
-        setTimeout(() => {
-          copyBtn.textContent = "↻ ";
-          copyBtn.classList.remove("copied");
-        }, 1200);
+    weightLabel.addEventListener("click", () => {
+      const isBodyweight = row.classList.toggle("bodyweight-mode");
+      if (isBodyweight) {
+        weightLabel.textContent = "自重";
+        weightInput.style.display = "none";
+        weightUnit.style.display = "none";
+      } else {
+        weightLabel.textContent = "重量";
+        weightInput.style.display = "";
+        weightUnit.style.display = "";
       }
     });
-  }
 
-  return row;
-}
+    return row;
+  };
 
-
-
-  // --- アクティブカード設定 ---
-  function setActiveCard(card) {
-    document.querySelectorAll(".card").forEach(c => c.classList.remove("active", "pulsing"));
+  // --- カード切替 ---
+  ui.setActiveCard = (card) => {
+    document.querySelectorAll(".card").forEach((c) => c.classList.remove("active", "pulsing"));
     if (card) {
       card.classList.add("active", "pulsing");
       card.scrollIntoView({ behavior: "smooth", block: "center" });
-      log("🎯 Active card:", card.querySelector(".exercise-title")?.textContent);
     }
-  }
+  };
 
   // --- 進行バー更新 ---
-  function updateProgress(done, total) {
-    const pct = total ? (done / total) * 100 : 0;
+  ui.updateProgress = (done, total) => {
+    const pct = Math.round((done / total) * 100);
     document.getElementById("progressBar").style.width = `${pct}%`;
-    document.getElementById("progressText").textContent = `${done} / ${total}`;
-    log(`📊 Progress: ${done}/${total} (${pct.toFixed(1)}%)`);
-  }
+    document.getElementById("progressText").textContent = `${done}/${total}`;
+    console.log("📊 Progress:", `${done}/${total} (${pct}%)`);
+  };
 
-  // --- 結果出力 ---
-  function generateResults() {
-    const lines = [];
-    document.querySelectorAll(".train-card").forEach(card => {
-      const titleEl = card.querySelector(".exercise-title") || card.querySelector("h2");
-      const title = titleEl ? titleEl.textContent.trim() : "(不明な種目)";
-      card.querySelectorAll(".record-row").forEach(r => {
-        const inputs = r.querySelectorAll("input");
-        const w = parseInt(inputs[0].value || "0");
-        const re = parseInt(inputs[1].value || "0");
-        if (w > 0 && re > 0) lines.push(`${title} ${w}kg×${re}回`);
-      });
+  // --- 結果生成 ---
+  ui.generateResults = () => {
+    const rows = document.querySelectorAll(".record-row");
+    let result = "";
+    rows.forEach((r) => {
+      const isBody = r.classList.contains("bodyweight-mode");
+      const weight = isBody
+        ? "自重"
+        : `${r.querySelector(".w-input")?.value || 0}kg`;
+      const reps = r.querySelector(".r-input")?.value || 0;
+      result += `${weight} × ${reps}回\n`;
     });
-
-    const resultText = lines.length ? lines.join("\n") : "記録が入力されていません。";
-    document.getElementById("resultText").textContent = resultText;
-    const section = document.getElementById("resultSection");
-    section.style.display = "block";
-    window.scrollTo({ top: section.offsetTop - 20, behavior: "smooth" });
-
-    log("📄 Results generated:", resultText);
-  }
-
-  // --- Wake Lock対応 ---
-  async function enableWakeLock() {
-    try {
-      const lock = await navigator.wakeLock.request("screen");
-      log("🟢 Wake Lock enabled");
-      lock.addEventListener("release", () => log("🟡 Wake Lock released"));
-    } catch (e) {
-      log("⚠️ Wake Lock unsupported:", e);
-    }
-  }
+    document.getElementById("resultText").textContent = result || "記録が入力されていません。";
+    document.getElementById("resultSection").style.display = "block";
+    console.log("📄 Results generated:", result);
+  };
 
   // --- バージョン表示 ---
-  function showVersion(tag) {
-    const div = document.createElement("div");
-    div.textContent = `🧩 ${tag}`;
-    Object.assign(div.style, {
-      position: "fixed",
-      bottom: "6px",
-      right: "8px",
-      fontSize: "11px",
-      opacity: "0.5",
-      zIndex: "3000",
-    });
-    document.body.appendChild(div);
-    log("💡 Loaded:", tag);
-  }
-
-  return {
-    createRecordRow,
-    setActiveCard,
-    updateProgress,
-    generateResults,
-    enableWakeLock,
-    showVersion,
+  ui.showVersion = (ver) => {
+    const v = document.createElement("div");
+    v.style.position = "fixed";
+    v.style.bottom = "4px";
+    v.style.right = "8px";
+    v.style.fontSize = "12px";
+    v.style.color = "#999";
+    v.textContent = ver;
+    document.body.appendChild(v);
   };
-})();
 
-window.addEventListener("DOMContentLoaded", () => {
-  HacoGymUI.showVersion("training_ui.js v2025-10-18-debug");
-});
+  // --- Wake Lock保持 ---
+  ui.enableWakeLock = async () => {
+    try {
+      if ("wakeLock" in navigator) await navigator.wakeLock.request("screen");
+      console.log("🟢 Wake Lock enabled");
+    } catch (e) {
+      console.log("⚠️ Wake Lock unavailable", e);
+    }
+  };
+
+  return ui;
+})();
