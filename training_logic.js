@@ -111,13 +111,29 @@ if (preparationAudios.length) {
   prepAudio.loop = false; // ✅ ループ禁止
   log("🎧 Prep audio:", prep.audio);
 
-  // STARTボタンを押すまで有効化しない
-  document.getElementById("startBtn").disabled = true;
-  prepAudio.addEventListener("ended", () => {
-    document.getElementById("startBtn").disabled = false;
-    log("✅ 準備完了。STARTボタン有効化");
+  const startBtn = document.getElementById("startBtn");
+  startBtn.disabled = true; // 初期は無効
+
+  // ページロード時に準備音声の自動再生を試みる
+  window.addEventListener("load", () => {
+    prepAudio.play().then(() => {
+      log("🎧 準備音声 再生開始");
+      // 再生成功 → 終了時に START 有効化
+      prepAudio.addEventListener("ended", () => {
+        startBtn.disabled = false;
+        log("✅ 準備音声終了 → START有効化");
+      });
+    }).catch(() => {
+      // 自動再生ブロック → 準備音声は飛ばして直接トレーニングへ
+      log("⚠️ 準備音声の自動再生ブロック → STARTで直接トレーニング開始");
+      startBtn.disabled = false;
+      startBtn.addEventListener("click", () => {
+        window.dispatchEvent(new Event("flow:start"));
+      }, { once: true });
+    });
   });
 }
+
 
 
   selectedData.forEach((ex, i) => {
