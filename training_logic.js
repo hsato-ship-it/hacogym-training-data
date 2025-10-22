@@ -1,5 +1,5 @@
 // ================================
-// ハコジム トレーニング ロジック（Vimeo順次再生＋APIロード保証＋準備自動再生）test
+// ハコジム トレーニング ロジック（イベント駆動版）
 // ================================
 (async () => {
   const DEBUG = true;
@@ -14,28 +14,23 @@
     return;
   }
 
-  // --- Vimeo APIを確実に読み込む ---
+  // -1- Vimeo APIを確実に読み込む ---
   async function ensureVimeoAPI() {
     if (window.Vimeo && window.Vimeo.Player) {
-      console.log("🎯[Logic] 🎬 Vimeo API already present");
+      log("🎯 Vimeo API already present");
       return;
     }
-    console.log("🎯[Logic] 📡 Loading Vimeo API...");
+    log("🎯 Loading Vimeo API...");
     await new Promise((resolve) => {
       const s = document.createElement("script");
       s.src = "https://player.vimeo.com/api/player.js";
-      s.onload = () => {
-        console.log("🎯[Logic] 🎬 Vimeo API loaded");
-        resolve();
-      };
-      s.onerror = () => {
-        console.error("❌ Vimeo API load failed");
-        resolve();
-      };
+      s.onload = () => { log("🎯 Vimeo API loaded"); resolve(); };
+      s.onerror = () => { console.error("❌ Vimeo API load failed"); resolve(); };
       document.head.appendChild(s);
     });
   }
 
+  // -2- データロード ---
   async function loadData() {
     const res = await fetch(JSON_URL, { cache: "no-store" });
     log("📥 Fetching training_data.json...");
@@ -44,6 +39,7 @@
     return json;
   }
 
+  // -3- 選択データの取得 ---
   const params = new URLSearchParams(location.search);
   const selectedIds = params.get("ids")
     ? params.get("ids").split(",")
@@ -56,7 +52,7 @@
   }
 
   const data = await loadData();
-  await ensureVimeoAPI(); // ← Vimeo APIロード保証（ここが重要）
+  await ensureVimeoAPI();
 
   const { exercises = [], preparationAudios = [], restAudios = [], endAudios = [] } = data;
   const selectedData = selectedIds.map(id => exercises.find(x => x.id === id)).filter(Boolean);
@@ -64,7 +60,7 @@
   container.innerHTML = "";
   log("🧩 Selected exercises:", selectedData);
 
-  // --- Vimeoプレイヤー管理 ---
+  // -4- Vimeoプレイヤー管理 ---
   const vimeoPlayers = new Map();
 
   function initVimeoPlayer(iframe) {
@@ -75,24 +71,12 @@
       vimeoPlayers.set(iframe, player);
       player.setLoop(true);
       player.setMuted(true);
-
-      iframe.addEventListener("load", () => {
-        log("🎞️ iframe loaded:", "#" + iframe.id);
-        player.pause();
-      });
+      player.setAutopause(false);
 
       player.ready().then(() => {
-  log("✅ vimeo ready:", "#" + iframe.id);
-  // 最初から再生してループ、静音で開始
-  player.setMuted(true);
-  player.setLoop(true);
-  player.setAutopause(false);
-  player.play().catch(() => log("⚠️ autoplay blocked on ready"));
-});
-
-      
-      player.on("play", () => log("▶ vimeo playing:", "#" + iframe.id));
-      player.on("error", (e) => log("❌ vimeo error:", e));
+        log("✅ vimeo ready:", "#" + iframe.id);
+        player.play().catch(() => log("⚠️ autoplay blocked on ready"));
+      });
 
       return player;
     } catch (e) {
@@ -105,22 +89,11 @@
     const iframe = card.querySelector("iframe");
     if (!iframe) return;
     let player = vimeoPlayers.get(iframe);
-    const play = () => {
-      if (!player) player = initVimeoPlayer(iframe);
-      if (player) {
-        log("▶ vimeo play request:", "#" + iframe.id);
-        player.play().catch(() => log("⚠️ Vimeo再生ブロック:", iframe.src));
-      }
-    };
-    // iframeロード待ち
-    if (!iframe.contentWindow || iframe.readyState !== "complete") {
-      iframe.addEventListener("load", play, { once: true });
-    } else {
-      play();
-    }
+    if (!player) player = initVimeoPlayer(iframe);
+    if (player) player.play().catch(() => log("⚠️ Vimeo再生ブロック:", iframe.src));
   }
 
-  // --- 準備カード ---
+  // -5- カード生成 ---
   let prepAudio = null;
   if (preparationAudios.length) {
     const prep = preparationAudios[Math.floor(Math.random() * preparationAudios.length)];
@@ -138,17 +111,14 @@
     log("🎧 Prep audio:", prep.audio);
 
     window.addEventListener("load", () => {
-      if (!prepAudio) return;
-      prepAudio.play().catch(() => log("⚠️ 準備音声の自動再生失敗（ユーザー操作待ち）"));
+      prepAudio.play().catch(() => log("⚠️ 準備音声の自動再生失敗"));
       prepAudio.addEventListener("ended", () => {
-        const startBtn = document.getElementById("startBtn");
-        if (startBtn) startBtn.disabled = false;
+        document.getElementById("startBtn").disabled = false;
         log("✅ 準備完了。STARTボタン有効化");
       });
     });
   }
 
-  // --- トレーニングカード ---
   selectedData.forEach((ex, i) => {
     const c = document.createElement("div");
     c.className = "card train-card";
@@ -182,10 +152,8 @@
     for (let s = 0; s < ex.standardSets; s++) {
       rows.appendChild(ui.createRecordRow(ex.standardReps, s === 0));
     }
-
     c.querySelector(".add-set-btn").addEventListener("click", () => {
-      const newRow = ui.createRecordRow("", false);
-      rows.appendChild(newRow);
+      rows.appendChild(ui.createRecordRow("", false));
     });
 
     container.appendChild(c);
@@ -203,7 +171,6 @@
         <audio preload="auto"><source src="${r.audio}" type="audio/wav"></audio>
       `;
       container.appendChild(restCard);
-      log("💤 Added rest card.");
     }
   });
 
@@ -219,55 +186,65 @@
       <audio preload="auto"><source src="${e.audio}" type="audio/wav"></audio>
     `;
     container.appendChild(endCard);
-    log("🏁 Added end card.");
   }
 
-  const audios = container.querySelectorAll("audio");
+  // -6- 進行制御（イベント駆動化） ---
+  const audios = Array.from(container.querySelectorAll("audio"));
   const trainCards = container.querySelectorAll(".train-card");
-  let doneCount = 0;
+  let currentIndex = -1;
   ui.updateProgress(0, trainCards.length);
 
-  audios.forEach((a, i) => {
+  function goNext() {
+    currentIndex++;
+    const a = audios[currentIndex];
+    if (!a) {
+      window.dispatchEvent(new Event("flow:end"));
+      return;
+    }
     const card = a.closest(".card");
+    ui.setActiveCard(card);
+    playVimeoInCard(card);
+    a.play().catch(()=>log("⚠️ audio再生失敗"));
+  }
+
+  window.addEventListener("flow:start", () => {
+    log("🚀 flow:start");
+    if (prepAudio) { prepAudio.pause(); prepAudio.currentTime = 0; }
+    goNext();
+  });
+
+  window.addEventListener("flow:next", () => {
+    log("➡ flow:next");
+    goNext();
+  });
+
+  window.addEventListener("flow:end", () => {
+    log("🏁 flow:end");
+    ui.generateResults();
+  });
+
+  // 各audio終了時に flow:next を発火
+  audios.forEach((a, i) => {
+    a.addEventListener("ended", () => {
+      if (a.closest(".train-card")) {
+        ui.updateProgress(i+1, trainCards.length);
+      }
+      window.dispatchEvent(new Event("flow:next"));
+    });
     a.addEventListener("play", () => {
       audios.forEach(x => x !== a && x.pause());
-      ui.setActiveCard(card);
       ui.currentAudio = a;
-      log("▶ 再生開始:", card.className);
-      playVimeoInCard(card);
-    });
-    a.addEventListener("ended", () => {
-      if (card.classList.contains("train-card")) doneCount++;
-      ui.updateProgress(doneCount, trainCards.length);
-      const next = audios[i + 1];
-      if (next) {
-        const nextCard = next.closest(".card");
-        playVimeoInCard(nextCard);
-        next.play();
-      } else {
-        ui.generateResults();
-      }
-      log("⏹ 再生終了:", card.className);
     });
   });
 
+  // -7- コントロールバーと操作 ---
   document.getElementById("startBtn").addEventListener("click", async () => {
-    log("🚀 STARTボタン押下");
     await ui.enableWakeLock();
-    if (prepAudio) {
-      prepAudio.pause();
-      prepAudio.currentTime = 0;
-    }
-    const first = document.querySelector(".train-card audio");
-    if (first) {
-      const firstCard = first.closest(".card");
-      playVimeoInCard(firstCard);
-      first.play().catch(() => log("⚠️ audio再生失敗"));
-    }
+    window.dispatchEvent(new Event("flow:start"));
 
     const pc = document.getElementById("playerControls");
     pc.innerHTML = `
-      <button id="togglePlayBtn">▶ 再生 / ⏸ 一時停止</button>
+      <button id="togglePlayBtn">▶/⏸</button>
       <button id="endSessionBtn">🏁 終了</button>
     `;
 
@@ -276,15 +253,15 @@
       if (ui.currentAudio.paused) ui.currentAudio.play();
       else ui.currentAudio.pause();
     });
-
     document.getElementById("endSessionBtn").addEventListener("click", () => {
       if (confirm("本当に終了しますか？")) {
-        document.querySelectorAll("audio").forEach(a => { a.pause(); a.currentTime = 0; });
-        ui.generateResults();
+        audios.forEach(a => { a.pause(); a.currentTime = 0; });
+        window.dispatchEvent(new Event("flow:end"));
       }
     });
   });
 
+  // -8- 成果コピー/シェア ---
   document.getElementById("copyResultBtn").addEventListener("click", async () => {
     const t = document.getElementById("resultText").textContent;
     await navigator.clipboard.writeText(t);
@@ -299,7 +276,7 @@
     const pc = document.getElementById("playerControls");
     pc.innerHTML = `
       <button id="shareBtn">✖ Xでシェア</button>
-      <button id="backToMenuBtn">🏠 メニューセレクトに戻る</button>
+      <button id="backToMenuBtn">🏠 メニューに戻る</button>
     `;
     document.getElementById("shareBtn").addEventListener("click", () => {
       const text = encodeURIComponent("今日のトレーニング完了！💪 #ハコジム");
@@ -311,5 +288,5 @@
     });
   };
 
-  ui.showVersion("training_logic.js v2025-10-21-vimeo-stable");
+  ui.showVersion("training_logic.js v2025-10-22-event-driven");
 })();
