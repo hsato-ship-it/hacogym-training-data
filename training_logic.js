@@ -280,52 +280,61 @@
     setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
   });
 
-  const originalGenerateResults = ui.generateResults;
-  ui.generateResults = function () {
-    // 種目名ごとに行をまとめ、0kgは「自重」扱い。全0/未入力なら「記録なし」
-    const cards = document.querySelectorAll(".train-card");
-    let result = "";
+const originalGenerateResults = ui.generateResults;
+ui.generateResults = function () {
+  const cards = document.querySelectorAll(".train-card");
+  let result = "";
 
-    cards.forEach((card) => {
-      const title = card.querySelector(".exercise-title")?.textContent || "種目";
-      const rows = card.querySelectorAll(".record-row");
-      let hasValid = false;
-      let text = `${title}\n`;
+  cards.forEach((card) => {
+    const title = card.querySelector(".exercise-title")?.textContent || "種目";
+    const rows = card.querySelectorAll(".record-row");
+    let text = `${title}\n`;
+    let hasValid = false;
 
-      rows.forEach((r) => {
-        const isBody = r.classList.contains("bodyweight-mode");
-        let weight = r.querySelector(".w-input")?.value || "";
-        let reps = r.querySelector(".r-input")?.value || "";
+    rows.forEach((r) => {
+      const isBody = r.classList.contains("bodyweight-mode");
+      let weight = r.querySelector(".w-input")?.value.trim() || "";
+      let reps = r.querySelector(".r-input")?.value.trim() || "";
 
-        if (isBody || !weight || weight === "0") weight = "自重";
-        else weight = `${weight}kg`;
-
-        if (reps && reps !== "0") hasValid = true;
-
-        text += `  ${weight} × ${reps || 0}回\n`;
-      });
-
-      if (!hasValid) text += "  記録なし\n";
-      result += text + "\n";
+      if (isBody) {
+        if (reps !== "" && reps !== "0") {
+          hasValid = true;
+          text += `  自重 × ${reps}回\n`;
+        }
+      } else {
+        if (weight !== "" && weight !== "0" && reps !== "" && reps !== "0") {
+          hasValid = true;
+          text += `  ${weight}kg × ${reps}回\n`;
+        }
+      }
     });
 
-    document.getElementById("resultText").textContent = result.trim();
-    document.getElementById("resultSection").style.display = "block";
+    if (!hasValid) {
+      // 有効な行がなければ種目名だけ
+      text = `${title}\n`;
+    }
 
-    const pc = document.getElementById("playerControls");
-    pc.innerHTML = `
-      <button id="shareBtn">✖ Xでシェア</button>
-      <button id="backToMenuBtn">🏠 メニューに戻る</button>
-    `;
-    document.getElementById("shareBtn").addEventListener("click", () => {
-      const text = encodeURIComponent("今日のトレーニング完了！💪 #ハコジム");
-      const url = encodeURIComponent(window.location.href);
-      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank");
-    });
-    document.getElementById("backToMenuBtn").addEventListener("click", () => {
-      location.href = "training_select";
-    });
-  };
+    result += text + "\n";
+  });
+
+  document.getElementById("resultText").textContent = result.trim();
+  document.getElementById("resultSection").style.display = "block";
+
+  const pc = document.getElementById("playerControls");
+  pc.innerHTML = `
+    <button id="shareBtn">✖ Xでシェア</button>
+    <button id="backToMenuBtn">🏠 メニューに戻る</button>
+  `;
+  document.getElementById("shareBtn").addEventListener("click", () => {
+    const text = encodeURIComponent("今日のトレーニング完了！💪 #ハコジム");
+    const url = encodeURIComponent(window.location.href);
+    window.open(\`https://twitter.com/intent/tweet?text=\${text}&url=\${url}\`, "_blank");
+  });
+  document.getElementById("backToMenuBtn").addEventListener("click", () => {
+    location.href = "training_select";
+  });
+};
+
 
   ui.showVersion("training_logic.js v2025-10-22-event-driven-start-skips-prep");
 })();
