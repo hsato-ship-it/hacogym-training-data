@@ -10,6 +10,11 @@ window.HacoGymUI = (() => {
     const row = document.createElement("div");
     row.className = "record-row";
     row.innerHTML = `
+      <div class="record-field weight-block">
+        <button class="weight-label-btn">重量</button>
+        <input type="number" min="0" max="999" value="" class="w-input" />
+        <span class="weight-unit">kg</span>
+      </div>
       <div class="record-field">
         <button class="weight-label-btn">重量</button>
         <!-- ✅ デフォルトを未入力に変更 -->
