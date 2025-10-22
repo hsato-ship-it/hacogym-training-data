@@ -1,5 +1,5 @@
 // ================================
-// ハコジム トレーニング ロジック（イベント駆動版）
+// ハコジム トレーニング ロジック（イベント駆動版 最終調整）
 // ================================
 (async () => {
   const DEBUG = true;
@@ -94,7 +94,7 @@
   }
 
   // -5- カード生成 ---
-  // 準備カード：音声は存在すれば置くが、STARTの挙動には影響させない（ループ禁止）
+  // 準備カード（ループせず START には影響しない）
   let prepAudio = null;
   if (preparationAudios.length) {
     const prep = preparationAudios[Math.floor(Math.random() * preparationAudios.length)];
@@ -109,16 +109,16 @@
     `;
     container.appendChild(c);
     prepAudio = c.querySelector("audio");
-    if (prepAudio) prepAudio.loop = false; // ✅ ループ禁止
+    if (prepAudio) prepAudio.loop = false;
     log("🎧 Prep audio:", prep.audio);
 
-    // 可能ならロード後に自動再生を試みる（失敗しても無視）
+    // 可能ならページロードで再生（失敗しても無視）
     window.addEventListener("load", () => {
       prepAudio?.play().catch(() => log("⚠️ 準備音声 自動再生ブロック（STARTには影響しません）"));
     });
   }
 
-  // トレーニングカード＋休憩カード＋終了カード 生成
+  // トレーニング／休憩／終了カードを生成
   selectedData.forEach((ex, i) => {
     const c = document.createElement("div");
     c.className = "card train-card";
@@ -189,7 +189,6 @@
   }
 
   // -6- 進行制御（イベント駆動化） ---
-  // 進行に使う音声は「トレーニング／休憩／終了」だけ。準備音声は含めない！
   const trainFlowAudios = Array.from(container.querySelectorAll(".train-card audio, .rest-card audio, .end-card audio"));
   const trainCards = container.querySelectorAll(".train-card");
   let currentIndex = -1;
@@ -210,9 +209,8 @@
 
   window.addEventListener("flow:start", () => {
     log("🚀 flow:start");
-    // 準備音声が鳴っていても中断して本編へ
     if (prepAudio) { try { prepAudio.pause(); prepAudio.currentTime = 0; } catch(_){} }
-    currentIndex = -1; // 必ず最初のトレーニングから
+    currentIndex = -1;
     goNext();
   });
 
@@ -226,13 +224,10 @@
     ui.generateResults();
   });
 
-  // 音声終了で自動的に次へ（準備カードは含まれていない）
   trainFlowAudios.forEach((a, i) => {
     a.addEventListener("ended", () => {
-      // トレーニングカードの終了数で進捗を更新
       const card = a.closest(".card");
       if (card?.classList.contains("train-card")) {
-        // i は train/rest/end 混在インデックスなので、done数は別計上
         const done = Array.from(trainFlowAudios)
           .slice(0, i + 1)
           .filter(x => x.closest(".card")?.classList.contains("train-card")).length;
@@ -280,61 +275,59 @@
     setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
   });
 
-const originalGenerateResults = ui.generateResults;
-ui.generateResults = function () {
-  const cards = document.querySelectorAll(".train-card");
-  let result = "";
+  const originalGenerateResults = ui.generateResults;
+  ui.generateResults = function () {
+    const cards = document.querySelectorAll(".train-card");
+    let result = "";
 
-  cards.forEach((card) => {
-    const title = card.querySelector(".exercise-title")?.textContent || "種目";
-    const rows = card.querySelectorAll(".record-row");
-    let text = `${title}\n`;
-    let hasValid = false;
+    cards.forEach((card) => {
+      const title = card.querySelector(".exercise-title")?.textContent || "種目";
+      const rows = card.querySelectorAll(".record-row");
+      let text = `${title}\n`;
+      let hasValid = false;
 
-    rows.forEach((r) => {
-      const isBody = r.classList.contains("bodyweight-mode");
-      let weight = r.querySelector(".w-input")?.value.trim() || "";
-      let reps = r.querySelector(".r-input")?.value.trim() || "";
+      rows.forEach((r) => {
+        const isBody = r.classList.contains("bodyweight-mode");
+        let weight = r.querySelector(".w-input")?.value.trim() || "";
+        let reps = r.querySelector(".r-input")?.value.trim() || "";
 
-      if (isBody) {
-        if (reps !== "" && reps !== "0") {
-          hasValid = true;
-          text += `  自重 × ${reps}回\n`;
+        if (isBody) {
+          if (reps !== "" && reps !== "0") {
+            hasValid = true;
+            text += `  自重 × ${reps}回\n`;
+          }
+        } else {
+          if (weight !== "" && weight !== "0" && reps !== "" && reps !== "0") {
+            hasValid = true;
+            text += `  ${weight}kg × ${reps}回\n`;
+          }
         }
-      } else {
-        if (weight !== "" && weight !== "0" && reps !== "" && reps !== "0") {
-          hasValid = true;
-          text += `  ${weight}kg × ${reps}回\n`;
-        }
+      });
+
+      if (!hasValid) {
+        text = `${title}\n`; // 有効な行がなければ種目名だけ
       }
+
+      result += text + "\n";
     });
 
-    if (!hasValid) {
-      // 有効な行がなければ種目名だけ
-      text = `${title}\n`;
-    }
+    document.getElementById("resultText").textContent = result.trim();
+    document.getElementById("resultSection").style.display = "block";
 
-    result += text + "\n";
-  });
+    const pc = document.getElementById("playerControls");
+    pc.innerHTML = `
+      <button id="shareBtn">✖ Xでシェア</button>
+      <button id="backToMenuBtn">🏠 メニューに戻る</button>
+    `;
+    document.getElementById("shareBtn").addEventListener("click", () => {
+      const text = encodeURIComponent("今日のトレーニング完了！💪 #ハコジム");
+      const url = encodeURIComponent(window.location.href);
+      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank");
+    });
+    document.getElementById("backToMenuBtn").addEventListener("click", () => {
+      location.href = "training_select";
+    });
+  };
 
-  document.getElementById("resultText").textContent = result.trim();
-  document.getElementById("resultSection").style.display = "block";
-
-  const pc = document.getElementById("playerControls");
-  pc.innerHTML = `
-    <button id="shareBtn">✖ Xでシェア</button>
-    <button id="backToMenuBtn">🏠 メニューに戻る</button>
-  `;
-  document.getElementById("shareBtn").addEventListener("click", () => {
-    const text = encodeURIComponent("今日のトレーニング完了！💪 #ハコジム");
-    const url = encodeURIComponent(window.location.href);
-    window.open(\`https://twitter.com/intent/tweet?text=\${text}&url=\${url}\`, "_blank");
-  });
-  document.getElementById("backToMenuBtn").addEventListener("click", () => {
-    location.href = "training_select";
-  });
-};
-
-
-  ui.showVersion("training_logic.js v2025-10-22-event-driven-start-skips-prep");
+  ui.showVersion("training_logic.js v2025-10-23-final");
 })();
