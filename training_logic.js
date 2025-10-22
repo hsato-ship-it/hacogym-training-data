@@ -93,31 +93,32 @@
     if (player) player.play().catch(() => log("⚠️ Vimeo再生ブロック:", iframe.src));
   }
 
-  // -5- カード生成 ---
-  let prepAudio = null;
-  if (preparationAudios.length) {
-    const prep = preparationAudios[Math.floor(Math.random() * preparationAudios.length)];
-    const c = document.createElement("div");
-    c.className = "card prep-card";
-    c.innerHTML = `
-      <div class="exercise-header blue-header">
-        <div class="exercise-title">準備</div>
-      </div>
-      <p class="comment">${prep.comment}</p>
-      <audio preload="auto"><source src="${prep.audio}" type="audio/wav"></audio>
-    `;
-    container.appendChild(c);
-    prepAudio = c.querySelector("audio");
-    log("🎧 Prep audio:", prep.audio);
+// -5- カード生成 ---
+let prepAudio = null;
+if (preparationAudios.length) {
+  const prep = preparationAudios[Math.floor(Math.random() * preparationAudios.length)];
+  const c = document.createElement("div");
+  c.className = "card prep-card";
+  c.innerHTML = `
+    <div class="exercise-header blue-header">
+      <div class="exercise-title">準備</div>
+    </div>
+    <p class="comment">${prep.comment}</p>
+    <audio preload="auto"><source src="${prep.audio}" type="audio/wav"></audio>
+  `;
+  container.appendChild(c);
+  prepAudio = c.querySelector("audio");
+  prepAudio.loop = false; // ✅ ループ禁止
+  log("🎧 Prep audio:", prep.audio);
 
-    window.addEventListener("load", () => {
-      prepAudio.play().catch(() => log("⚠️ 準備音声の自動再生失敗"));
-      prepAudio.addEventListener("ended", () => {
-        document.getElementById("startBtn").disabled = false;
-        log("✅ 準備完了。STARTボタン有効化");
-      });
-    });
-  }
+  // STARTボタンを押すまで有効化しない
+  document.getElementById("startBtn").disabled = true;
+  prepAudio.addEventListener("ended", () => {
+    document.getElementById("startBtn").disabled = false;
+    log("✅ 準備完了。STARTボタン有効化");
+  });
+}
+
 
   selectedData.forEach((ex, i) => {
     const c = document.createElement("div");
@@ -261,32 +262,63 @@
     });
   });
 
-  // -8- 成果コピー/シェア ---
-  document.getElementById("copyResultBtn").addEventListener("click", async () => {
-    const t = document.getElementById("resultText").textContent;
-    await navigator.clipboard.writeText(t);
-    const b = document.getElementById("copyResultBtn");
-    b.textContent = "コピーしました！";
-    setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
+// -8- 成果コピー/シェア ---
+document.getElementById("copyResultBtn").addEventListener("click", async () => {
+  const t = document.getElementById("resultText").textContent;
+  await navigator.clipboard.writeText(t);
+  const b = document.getElementById("copyResultBtn");
+  b.textContent = "コピーしました！";
+  setTimeout(() => (b.textContent = "本日の成果をコピー"), 1500);
+});
+
+const originalGenerateResults = ui.generateResults;
+ui.generateResults = function () {
+  const cards = document.querySelectorAll(".train-card");
+  let result = "";
+
+  cards.forEach((card) => {
+    const title = card.querySelector(".exercise-title")?.textContent || "種目";
+    const rows = card.querySelectorAll(".record-row");
+    let hasValid = false;
+    let text = `${title}\n`;
+
+    rows.forEach((r) => {
+      const isBody = r.classList.contains("bodyweight-mode");
+      let weight = r.querySelector(".w-input")?.value || "";
+      let reps = r.querySelector(".r-input")?.value || "";
+
+      if (isBody || !weight || weight === "0") weight = "自重";
+      else weight = `${weight}kg`;
+
+      if (reps && reps !== "0") hasValid = true;
+
+      text += `  ${weight} × ${reps || 0}回\n`;
+    });
+
+    if (!hasValid) {
+      text += "  記録なし\n";
+    }
+    result += text + "\n";
   });
 
-  const originalGenerateResults = ui.generateResults;
-  ui.generateResults = function () {
-    originalGenerateResults.call(ui);
-    const pc = document.getElementById("playerControls");
-    pc.innerHTML = `
-      <button id="shareBtn">✖ Xでシェア</button>
-      <button id="backToMenuBtn">🏠 メニューに戻る</button>
-    `;
-    document.getElementById("shareBtn").addEventListener("click", () => {
-      const text = encodeURIComponent("今日のトレーニング完了！💪 #ハコジム");
-      const url = encodeURIComponent(window.location.href);
-      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank");
-    });
-    document.getElementById("backToMenuBtn").addEventListener("click", () => {
-      location.href = "training_select";
-    });
-  };
+  document.getElementById("resultText").textContent = result.trim();
+  document.getElementById("resultSection").style.display = "block";
+
+  // コントロールバー書き換え（従来通り）
+  const pc = document.getElementById("playerControls");
+  pc.innerHTML = `
+    <button id="shareBtn">✖ Xでシェア</button>
+    <button id="backToMenuBtn">🏠 メニューに戻る</button>
+  `;
+  document.getElementById("shareBtn").addEventListener("click", () => {
+    const text = encodeURIComponent("今日のトレーニング完了！💪 #ハコジム");
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank");
+  });
+  document.getElementById("backToMenuBtn").addEventListener("click", () => {
+    location.href = "training_select";
+  });
+};
 
   ui.showVersion("training_logic.js v2025-10-22-event-driven");
 })();
