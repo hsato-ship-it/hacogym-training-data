@@ -1,5 +1,5 @@
 // ================================
-// HacoGym UI Module（自重切替＋Copyボタン整形版）
+// HacoGym UI Module（自重切替＋Copyボタン整形版 + レイアウト固定）
 // ================================
 window.HacoGymUI = (() => {
   const ui = {};
@@ -15,7 +15,7 @@ window.HacoGymUI = (() => {
         <input type="number" min="0" max="999" value="" class="w-input" />
         <span class="weight-unit">kg</span>
       </div>
-      <div class="record-field">
+      <div class="record-field reps-block">
         <label>回数</label>
         <input type="number" min="0" max="999" value="${defaultReps}" class="r-input" /> 回
       </div>
@@ -43,14 +43,14 @@ window.HacoGymUI = (() => {
             // 🔹 前の行が自重 → 自動的に自重モードに
             row.classList.add("bodyweight-mode");
             row.querySelector(".weight-label-btn").textContent = "自重";
-            thisW.style.display = "none";
-            row.querySelector(".weight-unit").style.display = "none";
+            thisW.style.visibility = "hidden";   // display:none → visibility:hidden
+            row.querySelector(".weight-unit").style.visibility = "hidden";
           } else {
             // 🔹 通常（重量あり）
             row.classList.remove("bodyweight-mode");
             row.querySelector(".weight-label-btn").textContent = "重量";
-            thisW.style.display = "";
-            row.querySelector(".weight-unit").style.display = "";
+            thisW.style.visibility = "visible";
+            row.querySelector(".weight-unit").style.visibility = "visible";
             thisW.value = prevW?.value || "";
           }
 
@@ -75,12 +75,12 @@ window.HacoGymUI = (() => {
       const isBodyweight = row.classList.toggle("bodyweight-mode");
       if (isBodyweight) {
         weightBtn.textContent = "自重";
-        weightInput.style.display = "none";
-        weightUnit.style.display = "none";
+        weightInput.style.visibility = "hidden";   // 幅は保持する
+        weightUnit.style.visibility = "hidden";
       } else {
         weightBtn.textContent = "重量";
-        weightInput.style.display = "";
-        weightUnit.style.display = "";
+        weightInput.style.visibility = "visible";
+        weightUnit.style.visibility = "visible";
       }
     });
 
