@@ -16,12 +16,6 @@ window.HacoGymUI = (() => {
         <span class="weight-unit">kg</span>
       </div>
       <div class="record-field">
-        <button class="weight-label-btn">重量</button>
-        <!-- ✅ デフォルトを未入力に変更 -->
-        <input type="number" min="0" max="999" value="" class="w-input" />
-        <span class="weight-unit">kg</span>
-      </div>
-      <div class="record-field">
         <label>回数</label>
         <input type="number" min="0" max="999" value="${defaultReps}" class="r-input" /> 回
       </div>
