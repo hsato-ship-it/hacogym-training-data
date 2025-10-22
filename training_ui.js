@@ -5,14 +5,15 @@ window.HacoGymUI = (() => {
   const ui = {};
   ui.currentAudio = null;
 
-  // --- 実施記録1行の作成 ---
+  // -1- 実施記録1行の作成 ---
   ui.createRecordRow = function (defaultReps = "", isFirstRow = false) {
     const row = document.createElement("div");
     row.className = "record-row";
     row.innerHTML = `
       <div class="record-field">
         <button class="weight-label-btn">重量</button>
-        <input type="number" min="0" max="999" value="0" class="w-input" />
+        <!-- ✅ デフォルトを未入力に変更 -->
+        <input type="number" min="0" max="999" value="" class="w-input" />
         <span class="weight-unit">kg</span>
       </div>
       <div class="record-field">
@@ -26,48 +27,47 @@ window.HacoGymUI = (() => {
       }
     `;
 
-// --- ⏩ 前のセットコピー ---
-if (!isFirstRow) {
-  const copyBtn = row.querySelector(".copy-prev-btn");
-  copyBtn.addEventListener("click", () => {
-    const prev = row.previousElementSibling;
-    if (prev) {
-      const prevW = prev.querySelector(".w-input");
-      const prevR = prev.querySelector(".r-input");
-      const isPrevBody = prev.classList.contains("bodyweight-mode");
+    // -1a- ⏩ 前のセットコピー ---
+    if (!isFirstRow) {
+      const copyBtn = row.querySelector(".copy-prev-btn");
+      copyBtn.addEventListener("click", () => {
+        const prev = row.previousElementSibling;
+        if (prev) {
+          const prevW = prev.querySelector(".w-input");
+          const prevR = prev.querySelector(".r-input");
+          const isPrevBody = prev.classList.contains("bodyweight-mode");
 
-      const thisW = row.querySelector(".w-input");
-      const thisR = row.querySelector(".r-input");
+          const thisW = row.querySelector(".w-input");
+          const thisR = row.querySelector(".r-input");
 
-      if (isPrevBody) {
-        // 🔹 前の行が自重 → 自動的に自重モードに
-        row.classList.add("bodyweight-mode");
-        row.querySelector(".weight-label-btn").textContent = "自重";
-        thisW.style.display = "none";
-        row.querySelector(".weight-unit").style.display = "none";
-      } else {
-        // 🔹 通常（重量あり）
-        row.classList.remove("bodyweight-mode");
-        row.querySelector(".weight-label-btn").textContent = "重量";
-        thisW.style.display = "";
-        row.querySelector(".weight-unit").style.display = "";
-        thisW.value = prevW?.value || 0;
-      }
+          if (isPrevBody) {
+            // 🔹 前の行が自重 → 自動的に自重モードに
+            row.classList.add("bodyweight-mode");
+            row.querySelector(".weight-label-btn").textContent = "自重";
+            thisW.style.display = "none";
+            row.querySelector(".weight-unit").style.display = "none";
+          } else {
+            // 🔹 通常（重量あり）
+            row.classList.remove("bodyweight-mode");
+            row.querySelector(".weight-label-btn").textContent = "重量";
+            thisW.style.display = "";
+            row.querySelector(".weight-unit").style.display = "";
+            thisW.value = prevW?.value || "";
+          }
 
-      thisR.value = prevR?.value || 0;
+          thisR.value = prevR?.value || "";
 
-      copyBtn.classList.add("copied");
-      copyBtn.textContent = "✅";
-      setTimeout(() => {
-        copyBtn.textContent = "↻";
-        copyBtn.classList.remove("copied");
-      }, 1200);
+          copyBtn.classList.add("copied");
+          copyBtn.textContent = "✅";
+          setTimeout(() => {
+            copyBtn.textContent = "↻";
+            copyBtn.classList.remove("copied");
+          }, 1200);
+        }
+      });
     }
-  });
-}
 
-
-    // --- ⚖️ 自重切替（重量ボタンタップ） ---
+    // -1b- ⚖️ 自重切替（重量ボタンタップ） ---
     const weightBtn = row.querySelector(".weight-label-btn");
     const weightInput = row.querySelector(".w-input");
     const weightUnit = row.querySelector(".weight-unit");
@@ -88,7 +88,7 @@ if (!isFirstRow) {
     return row;
   };
 
-  // --- カード切替 ---
+  // -2- カード切替 ---
   ui.setActiveCard = (card) => {
     document.querySelectorAll(".card").forEach((c) => c.classList.remove("active", "pulsing"));
     if (card) {
@@ -97,7 +97,7 @@ if (!isFirstRow) {
     }
   };
 
-  // --- 進行バー更新 ---
+  // -3- 進行バー更新 ---
   ui.updateProgress = (done, total) => {
     const pct = Math.round((done / total) * 100);
     document.getElementById("progressBar").style.width = `${pct}%`;
@@ -105,7 +105,7 @@ if (!isFirstRow) {
     console.log("📊 Progress:", `${done}/${total} (${pct}%)`);
   };
 
-  // --- 結果生成 ---
+  // -4- 結果生成 ---
   ui.generateResults = () => {
     const rows = document.querySelectorAll(".record-row");
     let result = "";
@@ -113,8 +113,8 @@ if (!isFirstRow) {
       const isBody = r.classList.contains("bodyweight-mode");
       const weight = isBody
         ? "自重"
-        : `${r.querySelector(".w-input")?.value || 0}kg`;
-      const reps = r.querySelector(".r-input")?.value || 0;
+        : `${r.querySelector(".w-input")?.value || ""}kg`;
+      const reps = r.querySelector(".r-input")?.value || "";
       result += `${weight} × ${reps}回\n`;
     });
     document.getElementById("resultText").textContent =
@@ -123,7 +123,7 @@ if (!isFirstRow) {
     console.log("📄 Results generated:", result);
   };
 
-  // --- バージョン表示 ---
+  // -5- バージョン表示 ---
   ui.showVersion = (ver) => {
     const v = document.createElement("div");
     v.style.position = "fixed";
@@ -135,7 +135,7 @@ if (!isFirstRow) {
     document.body.appendChild(v);
   };
 
-  // --- Wake Lock保持 ---
+  // -6- Wake Lock保持 ---
   ui.enableWakeLock = async () => {
     try {
       if ("wakeLock" in navigator) await navigator.wakeLock.request("screen");
