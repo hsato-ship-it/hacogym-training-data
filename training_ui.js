@@ -16,7 +16,6 @@ window.HacoGymUI = (() => {
         <span class="weight-unit">kg</span>
       </div>
       <div class="record-field reps-block">
-        <label>回数</label>
         <input type="number" min="0" max="999" value="${defaultReps}" class="r-input" /> 回
       </div>
       ${
